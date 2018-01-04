@@ -3,7 +3,10 @@
     "type": "project",
     "description": "Partnermarketing's Queuing Bundle",
     "autoload": {
-        "psr-0": { "": "src/" }
+        "psr-4": {
+            "Partnermarketing\\Queue\\": "src/",
+            "Partnermarketing\\Queue\\Test\\": "test/"
+        }
     },
     "require-dev": {
         "phpunit/phpunit": "~5.4"
