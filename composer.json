@@ -1,7 +1,7 @@
 {
-    "name": "partnermarketing/queue-bundle",
+    "name": "partnermarketing/queue",
     "type": "project",
-    "description": "Partnermarketing's Queuing Bundle",
+    "description": "Partnermarketing's Queuing System",
     "autoload": {
         "psr-4": {
             "Partnermarketing\\Queue\\": "src/",
