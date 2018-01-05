@@ -1,10 +1,10 @@
 <?php
 
-namespace Partnermarketing\Queue\Test\Service;
+namespace Partnermarketing\Queue\Test\Listener;
 
 use Partnermarketing\Queue\Entity\Queue;
 use Partnermarketing\Queue\Entity\Stream;
-use Partnermarketing\Queue\Service\CallbackQueueListener;
+use Partnermarketing\Queue\Listener\CallbackQueueListener;
 use PHPUnit\Framework\TestCase;
 
 /**

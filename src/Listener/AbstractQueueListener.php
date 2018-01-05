@@ -1,6 +1,6 @@
 <?php
 
-namespace Partnermarketing\Queue\Service;
+namespace Partnermarketing\Queue\Listener;
 
 use Partnermarketing\Queue\Entity\Queue;
 
