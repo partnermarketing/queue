@@ -3,45 +3,63 @@
 namespace Partnermarketing\Queue\Entity;
 
 /**
- * Represents a queue of data which can have multiple streams going to
- * different listeners
+ * Represents a queue of events from a stream
  */
 class Queue
 {
     /**
-     * The name of this queue
+     * The id of the queue
      *
      * @var string
      */
-    private $name;
+    private $serviceId;
 
     /**
-     * Sets up this entity
+     * The stream that this is a member of
      *
-     * @param string $name The name of this queue
+     * @var Stream
      */
-    public function __construct($name)
+    private $stream;
+
+    /**
+     * Constructs this entity
+     *
+     * @var string $serviceId
+     * @var Stream $stream
+     */
+    public function __construct($serviceId, Stream $stream)
     {
-        $this->name = $name;
+        $this->serviceId = $serviceId;
+        $this->stream = $stream;
     }
 
     /**
-     * Gets this queue's name
+     * Gets the Redis list that the service will listen on
      *
      * @return string
      */
-    public function getName()
+    public function getList()
     {
-        return $this->name;
+        return $this->stream->getQueueSet() . ':' . $this->serviceId;
     }
 
     /**
-     * Gets the Redis set of all this queue's listeners
+     * Gets the id of the service that will listen
      *
      * @return string
      */
-    public function getListenerSet()
+    public function getServiceId()
     {
-        return $this->name . ':listeners';
+        return $this->serviceId;
+    }
+
+    /**
+     * Gets the Stream that this is a member of
+     *
+     * @var Queue
+     */
+    public function getStream()
+    {
+        return $this->stream;
     }
 }
