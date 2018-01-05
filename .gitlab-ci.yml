@@ -1,0 +1,8 @@
+image: alpine
+
+test:
+    stage: test
+    script:
+        - ./bin/install.sh
+        - composer install
+        - vendor/phpunit/phpunit/phpunit

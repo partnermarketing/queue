@@ -1,6 +1,4 @@
-FROM alpine
-
-RUN apk add --no-cache \
+apk add --no-cache \
     openssl \
     ca-certificates \
     php7 \
@@ -14,8 +12,10 @@ RUN apk add --no-cache \
     php7-dom \
     php7-xml \
     php7-xmlwriter \
-    curl && \
-    curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer && \
-    apk del curl
+    curl
 
-WORKDIR /project
+curl -sS https://getcomposer.org/installer | \
+    php -- --install-dir=/usr/local/bin --filename=composer
+
+apk del curl
+

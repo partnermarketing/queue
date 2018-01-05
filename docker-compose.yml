@@ -3,6 +3,6 @@ services:
     redis:
         image: redis
     php:
-        build: ./test
+        build: .
         volumes:
             - ./:/project
