@@ -15,14 +15,14 @@ trait HasConnection
      *
      * @var Redis
      */
-    private $conn;
+    protected $conn;
 
     /**
      * The details of the connection
      *
      * @var Connection
      */
-    private $details;
+    protected $details;
 
     /**
      * Saves the given details and opens a new persistent connection
