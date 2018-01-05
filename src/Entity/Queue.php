@@ -8,11 +8,11 @@ namespace Partnermarketing\Queue\Entity;
 class Queue
 {
     /**
-     * The id of the queue
+     * The name of the queue
      *
      * @var string
      */
-    private $serviceId;
+    private $name;
 
     /**
      * The stream that this is a member of
@@ -24,12 +24,12 @@ class Queue
     /**
      * Constructs this entity
      *
-     * @var string $serviceId
+     * @var string $name
      * @var Stream $stream
      */
-    public function __construct($serviceId, Stream $stream)
+    public function __construct($name, Stream $stream)
     {
-        $this->serviceId = $serviceId;
+        $this->name = $name;
         $this->stream = $stream;
     }
 
@@ -40,17 +40,17 @@ class Queue
      */
     public function getList()
     {
-        return $this->stream->getQueueSet() . ':' . $this->serviceId;
+        return $this->stream->getQueueSet() . ':' . $this->name;
     }
 
     /**
-     * Gets the id of the service that will listen
+     * Gets the name of the queue
      *
      * @return string
      */
-    public function getServiceId()
+    public function getName()
     {
-        return $this->serviceId;
+        return $this->name;
     }
 
     /**

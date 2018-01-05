@@ -26,9 +26,9 @@ class QueueTest extends TestCase
         );
     }
 
-    public function testGetServiceId()
+    public function testGetName()
     {
-        $this->assertSame('test', $this->queue->getServiceId());
+        $this->assertSame('test', $this->queue->getName());
     }
 
     public function testGetStream()
