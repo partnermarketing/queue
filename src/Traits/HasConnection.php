@@ -40,7 +40,7 @@ trait HasConnection
      * @param boolean $persistent
      * @return Redis
      */
-    private function createConnection($persistent = false)
+    protected function createConnection($persistent = false)
     {
         $method = $persistent ? 'pconnect' : 'connect';
 
