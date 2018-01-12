@@ -18,7 +18,7 @@ abstract class AbstractQueueListener implements QueueListener
      *
      * @var Queue
      */
-    private $queue;
+    protected $queue;
 
     /**
      * Constructs this handler
