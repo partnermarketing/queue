@@ -61,6 +61,10 @@ class EventPublisherTest extends TestCase
         $conn = $this->reflect->getProperty('conn');
         $conn->setAccessible(true);
         $conn->setValue($this->object, $this->conn);
+
+        $stream = $this->reflect->getProperty('stream');
+        $stream->setAccessible(true);
+        $stream->setValue($this->object, new Stream('test_stream'));
     }
 
     /**
@@ -69,9 +73,7 @@ class EventPublisherTest extends TestCase
      */
     public function testGetStreamQueues()
     {
-        $return = iterator_to_array($this->object->getStreamQueues(
-            new Stream('test_stream')
-        ));
+        $return = iterator_to_array($this->object->getStreamQueues());
 
         $this->assertCount(1, $return);
         $this->assertInstanceOf(Queue::class, $return[0]);
@@ -94,10 +96,7 @@ class EventPublisherTest extends TestCase
                 }
             ));
 
-        $this->object->addEvent(
-            new Stream('test_stream'),
-            ['event' => 'something']
-        );
+        $this->object->addEvent(['event' => 'something']);
     }
 }
 

@@ -2,6 +2,7 @@
 
 namespace Partnermarketing\Queue\Service;
 
+use Partnermarketing\Queue\Entity\Connection;
 use Partnermarketing\Queue\Entity\Stream;
 use Partnermarketing\Queue\Entity\Queue;
 use Partnermarketing\Queue\Listener\QueueListener;
@@ -13,31 +14,49 @@ use Redis;
 class EventPublisher extends RedisService
 {
     /**
+     * The stream this publisher sends events too
+     *
+     * @var Stream
+     */
+    protected $stream;
+
+    /**
+     * Constructs the event publisher
+     *
+     * @param Connection $details
+     * @param Stream $stream
+     */
+    public function __construct(Connection $details, Stream $stream)
+    {
+        parent::__construct($details);
+
+        $this->stream = $stream;
+    }
+
+    /**
      * Queries the redis queue set for this stream and returns a queue
      * for each of them
      *
-     * @param Stream $stream
      * @return array<Queue>
      */
-    public function getStreamQueues(Stream $stream)
+    public function getStreamQueues()
     {
-        $queues = $this->conn->sMembers($stream->getQueueSet());
+        $queues = $this->conn->sMembers($this->stream->getQueueSet());
         foreach ($queues as $queue) {
-            yield new Queue($queue, $stream);
+            yield new Queue($queue, $this->stream);
         }
     }
 
     /**
      * Publishes an event to a stream by adding it to each of its queues
      *
-     * @param Stream $stream
      * @param mixed $event
      */
-    public function addEvent(Stream $stream, $event)
+    public function addEvent($event)
     {
         $eventData = json_encode($event);
 
-        foreach ($this->getStreamQueues($stream) as $queue) {
+        foreach ($this->getStreamQueues() as $queue) {
             $this->conn->lPush($queue->getList(), $eventData);
         }
     }
