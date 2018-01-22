@@ -2,6 +2,7 @@
 
 namespace Partnermarketing\Queue\Test\Service;
 
+use BadMethodCallException;
 use Partnermarketing\Queue\Service\ListenerHandler;
 use Partnermarketing\Queue\Entity\Queue;
 use Partnermarketing\Queue\Entity\Stream;
@@ -47,6 +48,13 @@ class ListenerHandlerTest extends TestCase
     private $event;
 
     /**
+     * The queue being tested
+     *
+     * @var Queue
+     */
+    private $queue;
+
+    /**
      * Sets up the commonly used items for each test
      */
     public function setUp()
@@ -57,12 +65,14 @@ class ListenerHandlerTest extends TestCase
 
         $this->conn = $this->getMockBuilder(Redis::class)
             ->disableOriginalConstructor()
-            ->setMethods(['sAdd', 'brPop'])
+            ->setMethods(['sAdd', 'brPop', 'sRem'])
             ->getMock();
 
         $conn = $this->reflect->getProperty('conn');
         $conn->setAccessible(true);
         $conn->setValue($this->object, $this->conn);
+
+        $this->queue = new Queue('test', new Stream('test_stream'));
     }
 
     /**
@@ -72,7 +82,7 @@ class ListenerHandlerTest extends TestCase
     private function getMockQueueListener()
     {
         return new CallbackQueueListener(
-            new Queue('test', new Stream('test_stream')),
+            $this->queue,
             [$this, 'executeCallback']
         );
     }
@@ -101,21 +111,26 @@ class ListenerHandlerTest extends TestCase
     }
 
     /**
+     * Expects that the stream queue set will be accessed with the test
+     * queue. Either with a sSet or sRem command
+     *
+     * @var string $command
+     */
+    private function expectSetCall($command)
+    {
+        $this->conn->expects($this->once())
+            ->method($command)
+            ->with('test_stream:queues', 'test');
+    }
+
+    /**
      * Tests that registerListener() method adds the given listener to
      * its internal list and that it registers it in the queues list on
      * redis
      */
     public function testRegisterListener()
     {
-        $self = $this;
-        $this->conn->expects($this->once())
-            ->method('sAdd')
-            ->will($this->returnCallback(
-                function($set, $value) use ($self) {
-                    $self->assertSame('test_stream:queues', $set);
-                    $self->assertSame('test', $value);
-                }
-            ));
+        $this->expectSetCall('sAdd');
 
         $listener = $this->getMockQueueListener();
 
@@ -125,6 +140,74 @@ class ListenerHandlerTest extends TestCase
             ['test_stream:queues:test' => $listener],
             $this->getListeners()->getValue($this->object)
         );
+    }
+
+    /**
+     * Sets up the environment and expectations for a normal run of a
+     * deregister opperation (deregistering either by queue / listener
+     * when it does exist)
+     */
+    private function setUpSuccessfulDeregisterTest()
+    {
+        $this->expectSetCall('sRem');
+        $this->getListeners()->setValue(
+            $this->object,
+            ['test_stream:queues:test' => '123']
+        );
+    }
+
+    /**
+     * Asserts that there are no listeners on the handler
+     */
+    private function assertNoListeners()
+    {
+        $this->assertEmpty(
+            $this->getListeners()->getValue($this->object)
+        );
+    }
+
+    /**
+     * Tests that a listener can be deregistered by queue name
+     */
+    public function testDeregisterQueue()
+    {
+        $this->setUpSuccessfulDeregisterTest();
+        $this->object->deregisterQueue($this->queue);
+        $this->assertNoListeners();
+    }
+
+    /**
+     * Tests that if you try to deregister a queue that doesn't exist
+     * it throws an exception
+     */
+    public function testDeregisterQueueException()
+    {
+        $this->expectException(BadMethodCallException::class);
+        $this->expectExceptionMessage('Queue test is not registered');
+
+        $this->object->deregisterQueue($this->queue);
+    }
+
+    /**
+     * Tests that an exception is not thrown when force is specified
+     */
+    public function testDeregisterQueueForce()
+    {
+        $this->expectSetCall('sRem');
+
+        $this->object->deregisterQueue($this->queue, true);
+    }
+
+    /**
+     * Tests that a listener can be deregistered by listener
+     */
+    public function testDeregisterListener()
+    {
+        $this->setUpSuccessfulDeregisterTest();
+        $this->object->deregisterListener(
+            $this->getMockQueueListener()
+        );
+        $this->assertNoListeners();
     }
 
     /**

@@ -2,7 +2,9 @@
 
 namespace Partnermarketing\Queue\Service;
 
+use BadMethodCallException;
 use Partnermarketing\Queue\Listener\QueueListener;
+use Partnermarketing\Queue\Entity\Queue;
 
 /**
  * A Service which listens for events on multiple queues and hands them
@@ -28,6 +30,40 @@ class ListenerHandler extends RedisService
             $queue->getName()
         );
         $this->listeners[$queue->getList()] = $listener;
+    }
+
+    /**
+     * Deletes a listener based on a queue
+     *
+     * @param Queue $queue
+     * @param boolean $force Does not throw exception if not registered
+     * @throws BadMethodCallException If the queue isn't registered
+     */
+    public function deregisterQueue(Queue $queue, $force = false)
+    {
+        if (!isset($this->listeners[$queue->getList()]) && !$force) {
+            throw new BadMethodCallException(
+                'Queue ' . $queue->getName() . ' is not registered'
+            );
+        }
+
+        unset($this->listeners[$queue->getList()]);
+
+        $this->conn->sRem(
+            $queue->getStream()->getQueueSet(),
+            $queue->getName()
+        );
+    }
+
+    /**
+     * Deletes a listener
+     *
+     * @param QueueListener
+     * @throws BadMethodCallException If the queue isn't registered
+     */
+    public function deregisterListener(QueueListener $listener)
+    {
+        $this->deregisterQueue($listener->getQueue());
     }
 
     /**
