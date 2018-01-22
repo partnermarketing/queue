@@ -5,4 +5,4 @@ test:
     script:
         - ./bin/install.sh
         - composer install
-        - vendor/phpunit/phpunit/phpunit
+        - vendor/phpunit/phpunit/phpunit --coverage-text --colors=never

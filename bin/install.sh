@@ -19,3 +19,4 @@ curl -sS https://getcomposer.org/installer | \
 
 apk del curl
 
+sed -i 's/;//' /etc/php7/conf.d/xdebug.ini
