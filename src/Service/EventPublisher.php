@@ -2,7 +2,6 @@
 
 namespace Partnermarketing\Queue\Service;
 
-use Partnermarketing\Queue\Traits\HasConnection;
 use Partnermarketing\Queue\Entity\Stream;
 use Partnermarketing\Queue\Entity\Queue;
 use Partnermarketing\Queue\Listener\QueueListener;
@@ -11,10 +10,8 @@ use Redis;
 /**
  * A service which is able to publish events to a stream
  */
-class EventPublisher
+class EventPublisher extends RedisService
 {
-    use HasConnection;
-
     /**
      * Queries the redis queue set for this stream and returns a queue
      * for each of them

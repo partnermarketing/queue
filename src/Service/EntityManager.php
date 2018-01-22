@@ -3,19 +3,12 @@
 namespace Partnermarketing\Queue\Service;
 
 use Partnermarketing\Queue\Entity\Connection;
-use Partnermarketing\Queue\Traits\HasConnection;
 
 /**
  * An abstract service that is able to work with entities
  */
-abstract class EntityManager
+abstract class EntityManager extends RedisService
 {
-    use HasConnection {
-        // Rewrite the trait-provided constructor as we still need to be
-        // able to call it from our own constructor
-        __construct as private init;
-    }
-
     /**
      * The type of this entity
      *
@@ -40,7 +33,8 @@ abstract class EntityManager
      */
     public function __construct(Connection $details, $type, $id)
     {
-        $this->init($details);
+        parent::__construct($details);
+
         $this->type = $type;
         $this->id = $id;
     }

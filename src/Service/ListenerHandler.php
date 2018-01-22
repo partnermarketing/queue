@@ -2,17 +2,14 @@
 
 namespace Partnermarketing\Queue\Service;
 
-use Partnermarketing\Queue\Traits\HasConnection;
 use Partnermarketing\Queue\Listener\QueueListener;
 
 /**
  * A Service which listens for events on multiple queues and hands them
  * to the appropriate listener to be processed
  */
-class ListenerHandler
+class ListenerHandler extends RedisService
 {
-    use HasConnection;
-
     /**
      * The list of listeners on this connection
      */
