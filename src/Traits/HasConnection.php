@@ -3,6 +3,7 @@
 namespace Partnermarketing\Queue\Traits;
 
 use Partnermarketing\Queue\Entity\Connection;
+use Partnermarketing\Queue\Service\RedisService;
 use Redis;
 
 /**
