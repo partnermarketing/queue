@@ -3,6 +3,7 @@
 namespace Partnermarketing\Queue\Test\Service;
 
 use Partnermarketing\Queue\Service\EventPublisher;
+use Partnermarketing\Queue\Entity\Connection;
 use Partnermarketing\Queue\Entity\Queue;
 use Partnermarketing\Queue\Entity\Stream;
 use PHPUnit\Framework\TestCase;
@@ -37,14 +38,24 @@ class EventPublisherTest extends TestCase
     private $reflect;
 
     /**
-     * Sets up the commonly used items for each test
+     * Reflector for the stream property
+     *
+     * @var ReflectionProperty
      */
-    public function setUp()
-    {
-        $this->event = null;
-        $this->reflect = new ReflectionClass(EventPublisher::class);
-        $this->object = $this->reflect->newInstanceWithoutConstructor();
+    private $streamProperty;
 
+    /**
+     * Reflector for the details property
+     *
+     * @var ReflectionProperty
+     */
+    private $detailsProperty;
+
+    /**
+     * Setup the mock connection
+     */
+    private function setUpMockConnection()
+    {
         $this->conn = $this->getMockBuilder(Redis::class)
             ->disableOriginalConstructor()
             ->setMethods(['sMembers', 'lPush'])
@@ -61,10 +72,49 @@ class EventPublisherTest extends TestCase
         $conn = $this->reflect->getProperty('conn');
         $conn->setAccessible(true);
         $conn->setValue($this->object, $this->conn);
+    }
 
-        $stream = $this->reflect->getProperty('stream');
-        $stream->setAccessible(true);
-        $stream->setValue($this->object, new Stream('test_stream'));
+    /**
+     * Sets up the commonly used items for each test
+     */
+    public function setUp()
+    {
+        $this->event = null;
+        $this->reflect = new ReflectionClass(EventPublisher::class);
+        $this->object = $this->reflect->newInstanceWithoutConstructor();
+
+        $this->detailsProperty = $this->reflect->getProperty('details');
+        $this->detailsProperty->setAccessible(true);
+
+        $this->streamProperty = $this->reflect->getProperty('stream');
+        $this->streamProperty->setAccessible(true);
+        $this->streamProperty->setValue(
+            $this->object,
+            new Stream('test_stream')
+        );
+    }
+
+    /**
+     * Tests that the constructor sets the stream and calls its parent
+     * constructor to set the connection details
+     */
+    public function testConstructor()
+    {
+        EventPublisher::setTestMode();
+
+        $conn = new Connection();
+        $stream = new Stream('test_stream');
+
+        $object = new EventPublisher($conn, $stream);
+
+        $this->assertSame(
+            $conn,
+            $this->detailsProperty->getValue($object)
+        );
+        $this->assertSame(
+            $stream,
+            $this->streamProperty->getValue($object)
+        );
     }
 
     /**
@@ -73,6 +123,7 @@ class EventPublisherTest extends TestCase
      */
     public function testGetStreamQueues()
     {
+        $this->setUpMockConnection();
         $return = iterator_to_array($this->object->getStreamQueues());
 
         $this->assertCount(1, $return);
@@ -86,6 +137,7 @@ class EventPublisherTest extends TestCase
      */
     public function testAddEvent()
     {
+        $this->setUpMockConnection();
         $self = $this;
         $this->conn->expects($this->once())
             ->method('lPush')
