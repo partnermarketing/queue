@@ -6,6 +6,7 @@ use BadMethodCallException;
 use Partnermarketing\Queue\Service\ListenerHandler;
 use Partnermarketing\Queue\Entity\Queue;
 use Partnermarketing\Queue\Entity\Stream;
+use Partnermarketing\Queue\Exception\TimeoutException;
 use Partnermarketing\Queue\Listener\CallbackQueueListener;
 use PHPUnit\Framework\TestCase;
 use Redis;
@@ -243,6 +244,26 @@ class ListenerHandlerTest extends TestCase
         $this->object->listenOnce(5);
 
         $this->assertEquals(['event' => 'something'], $this->event);
+    }
+
+    /**
+     * Tests that when the connection returns nothing, it correctly
+     * identifies that a timeout has occured and throws an exception
+     */
+    public function testListenOnceTimeout()
+    {
+        $this->getListeners()->setValue(
+            $this->object,
+            ['test_stream:queues:test' => null]
+        );
+        $this->conn->expects($this->once())
+            ->method('brPop')
+            ->with(['test_stream:queues:test'], 25)
+            ->willReturn(null);
+        $this->expectException(TimeoutException::class);
+        $this->expectExceptionMessage('Timed out waiting for events');
+
+        $this->object->listenOnce(25);
     }
 }
 

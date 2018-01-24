@@ -3,6 +3,7 @@
 namespace Partnermarketing\Queue\Service;
 
 use BadMethodCallException;
+use Partnermarketing\Queue\Exception\TimeoutException;
 use Partnermarketing\Queue\Listener\QueueListener;
 use Partnermarketing\Queue\Entity\Queue;
 
@@ -90,6 +91,10 @@ class ListenerHandler extends RedisService
             array_keys($this->listeners),
             $timeout
         );
+
+        if (!$event) {
+            throw new TimeoutException('Timed out waiting for events');
+        }
 
         $this->listeners[$event[0]]->execute(
             json_decode($event[1], true)
