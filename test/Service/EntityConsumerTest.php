@@ -9,7 +9,7 @@ use Partnermarketing\Queue\Service\EntityConsumer;
 use Partnermarketing\Queue\Service\EventPublisher;
 use ReflectionClass;
 
-class EntityConsumerTest extends EntityManagerTest
+class EntityConsumerTest extends EntityManagerTestHelper
 {
     /**
      * The response queue the EntityConsumer listens on when waiting for

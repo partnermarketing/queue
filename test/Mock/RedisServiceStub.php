@@ -6,7 +6,7 @@ use Partnermarketing\Queue\Service\RedisService;
 
 /**
  * A stub which exists only to extend the RedisService to make it
- * accessibly
+ * accessible
  */
 class RedisServiceStub extends RedisService
 {
