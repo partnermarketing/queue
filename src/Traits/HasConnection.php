@@ -42,6 +42,10 @@ trait HasConnection
      */
     protected function createConnection($persistent = false)
     {
+        if (RedisService::inTestMode()) {
+            return null;
+        }
+
         $method = $persistent ? 'pconnect' : 'connect';
 
         $conn = new Redis();
