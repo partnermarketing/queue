@@ -72,11 +72,19 @@ class ListenerHandler extends RedisService
      * listening again
      *
      * @param int $timeout The timeout to listen for, or 0 for forever
+     * @param bool $returnOnTimeout If true, a timeout will just return
+     * @throws TimeoutException If the connection timed out
      */
-    public function listen($timeout = 0)
+    public function listen($timeout = 0, $returnOnTimeout = false)
     {
-        while (true) {
-            $this->listenOnce($timeout);
+        try {
+            while (true) {
+                $this->listenOnce($timeout);
+            }
+        } catch (TimeoutException $e) {
+            if (!$returnOnTimeout) {
+                throw $e;
+            }
         }
     }
 
@@ -84,6 +92,7 @@ class ListenerHandler extends RedisService
      * Listens for one event on any queue, handles it, then returns
      *
      * @param int $timeout The timeout to listen for, or 0 for forever
+     * @throws TimeoutException If the connection timed out
      */
     public function listenOnce($timeout = 0)
     {

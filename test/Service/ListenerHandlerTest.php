@@ -265,5 +265,69 @@ class ListenerHandlerTest extends TestCase
 
         $this->object->listenOnce(25);
     }
+
+    /**
+     * Runs a test on the listen() method, confirming that it keeps
+     * calling listenOnce until an exception is returned
+     *
+     * @param string $throw The exception to throw
+     * @return ListenHandler A mocked ListenerHandler to test
+     */
+    private function setUpListenTest(string $throw) : ListenerHandler
+    {
+        $object = $this->getMockBuilder(ListenerHandler::class)
+            ->disableOriginalConstructor()
+            ->setMethods(['listenOnce'])
+            ->getMock();
+
+        $object->expects($this->exactly(3))
+            ->method('listenOnce')
+            ->with(25)
+            ->will($this->returnCallback(function() use ($throw) {
+                static $i;
+
+                if (++$i === 3) {
+                    throw new $throw('Test: 3rd reached');
+                }
+            }));
+
+        return $object;
+    }
+
+    /**
+     * Tests that listen() keeps calling listenOnce() until it throws an
+     * exception, and this is bubbled up
+     */
+    public function testListen()
+    {
+        $this->expectException(TimeoutException::class);
+        $this->expectExceptionMessage('Test: 3rd reached');
+
+        $this->setUpListenTest(TimeoutException::class)
+            ->listen(25, false);
+    }
+
+    /**
+     * Tests that when listen() is called with returnOnTimeout, a
+     * TimeoutException is not bubbled back up to the application
+     */
+    public function testListenReturnOnTimeout()
+    {
+        $this->setUpListenTest(TimeoutException::class)
+            ->listen(25, true);
+    }
+
+    /**
+     * Tests that when listen() is called with returnOnTimeout, other
+     * exceptions are still bubbled up
+     */
+    public function testListenOtherExceptions()
+    {
+        $this->expectException(BadMethodCallException::class);
+        $this->expectExceptionMessage('Test: 3rd reached');
+
+        $this->setUpListenTest(BadMethodCallException::class)
+            ->listen(25, true);
+    }
 }
 
