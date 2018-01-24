@@ -3,7 +3,6 @@ apk add --no-cache \
     ca-certificates \
     php7 \
     php7-xdebug \
-    php7-redis \
     php7-json \
     php7-mbstring \
     php7-phar \
