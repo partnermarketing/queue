@@ -90,11 +90,15 @@ class ListenerHandlerTest extends TestCase
 
     /**
      * The execute callback used by the listener, just saves the value
-     * into $this->event.
+     * into $this->event and returns a value
+     *
+     * @return string
      */
     public function executeCallback($event)
     {
         $this->event = $event;
+
+        return 'RETURN_VALUE';
     }
 
     /**
@@ -241,7 +245,10 @@ class ListenerHandlerTest extends TestCase
             ['test_stream:queues:test' => $this->getMockQueueListener()]
         );
 
-        $this->object->listenOnce(5);
+        $this->assertSame(
+            'RETURN_VALUE',
+            $this->object->listenOnce(5)
+        );
 
         $this->assertEquals(['event' => 'something'], $this->event);
     }

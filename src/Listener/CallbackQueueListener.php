@@ -34,6 +34,7 @@ class CallbackQueueListener extends AbstractQueueListener
     public function execute($event)
     {
         $cb = $this->callback;
-        $cb($event);
+
+        return $cb($event);
     }
 }

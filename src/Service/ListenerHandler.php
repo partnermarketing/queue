@@ -92,6 +92,7 @@ class ListenerHandler extends RedisService
      * Listens for one event on any queue, handles it, then returns
      *
      * @param int $timeout The timeout to listen for, or 0 for forever
+     * @return mixed The return of the executed method
      * @throws TimeoutException If the connection timed out
      */
     public function listenOnce($timeout = 0)
@@ -105,7 +106,7 @@ class ListenerHandler extends RedisService
             throw new TimeoutException('Timed out waiting for events');
         }
 
-        $this->listeners[$event[0]]->execute(
+        return $this->listeners[$event[0]]->execute(
             json_decode($event[1], true)
         );
     }

@@ -49,6 +49,8 @@ class CallbackQueueListenerTest extends TestCase
     public function executeCallback($event)
     {
         $this->event = $event;
+
+        return 'RETURN_VALUE';
     }
 
     /**
@@ -67,7 +69,10 @@ class CallbackQueueListenerTest extends TestCase
     {
         $array = ['1', '2', '3'];
 
-        $this->listener->execute($array);
+        $this->assertEquals(
+            'RETURN_VALUE',
+            $this->listener->execute($array)
+        );
 
         $this->assertEquals($array, $this->event);
     }
