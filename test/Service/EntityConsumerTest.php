@@ -3,8 +3,10 @@
 namespace Partnermarketing\Queue\Test\Service;
 
 use RuntimeException;
+use Partnermarketing\Queue\Entity\Connection;
 use Partnermarketing\Queue\Entity\Stream;
 use Partnermarketing\Queue\Entity\Queue;
+use Partnermarketing\Queue\Service\ListenerHandler;
 use Partnermarketing\Queue\Service\EntityConsumer;
 use Partnermarketing\Queue\Service\EventPublisher;
 use ReflectionClass;
@@ -39,6 +41,28 @@ class EntityConsumerTest extends EntityManagerTestHelper
         $this->setProperty('type', 'entity');
         $this->setProperty('eventPublisher', $this->eventPublisher);
         $this->setProperty('conn', $this->conn);
+    }
+
+    public function testConstructor()
+    {
+        $conn = new Connection();
+        $this->object = new EntityConsumer($conn, 'type');
+
+        $this->assertSame(
+            'type_response',
+            $this->object->getQueue()->getStream()->getName()
+        );
+        $this->assertSame(
+            1,
+            preg_match(
+                '/^[0-9a-z]{13}$/',
+                $this->object->getQueue()->getName()
+            )
+        );
+        $this->assertInstanceOf(
+            ListenerHandler::class,
+            $this->getProperty('listenerHandler')
+        );
     }
 
     /**

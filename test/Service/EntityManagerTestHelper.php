@@ -58,6 +58,20 @@ class EntityManagerTestHelper extends TestCase
     }
 
     /**
+     * Gets a property on the service, even if its private
+     *
+     * @param string $property The property to get
+     * @return mixed The value of the property
+     */
+    protected function getProperty(string $property)
+    {
+        $prop = $this->reflect->getProperty($property);
+        $prop->setAccessible(true);
+
+        return $prop->getValue($this->object);
+    }
+
+    /**
      * Invokes a method on the service with the given arguments, even if
      * it is priviate, and returns its response
      *

@@ -19,20 +19,6 @@ use ReflectionClass;
 class EntityManagerTest extends EntityManagerTestHelper
 {
     /**
-     * Gets a property on the service, even if its private
-     *
-     * @param string $property The property to get
-     * @return mixed The value of the property
-     */
-    protected function getProperty(string $property)
-    {
-        $prop = $this->reflect->getProperty($property);
-        $prop->setAccessible(true);
-
-        return $prop->getValue($this->object);
-    }
-
-    /**
      * Sets up a mocked version of the service for testing without the
      * constructor
      */

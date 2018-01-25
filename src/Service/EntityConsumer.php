@@ -3,7 +3,9 @@
 namespace Partnermarketing\Queue\Service;
 
 use RuntimeException;
+use Partnermarketing\Queue\Entity\Connection;
 use Partnermarketing\Queue\Entity\Stream;
+use Partnermarketing\Queue\Entity\Queue;
 use Partnermarketing\Queue\Listener\QueueListener;
 
 /**
