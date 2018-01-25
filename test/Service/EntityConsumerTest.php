@@ -6,6 +6,7 @@ use RuntimeException;
 use Partnermarketing\Queue\Entity\Connection;
 use Partnermarketing\Queue\Entity\Stream;
 use Partnermarketing\Queue\Entity\Queue;
+use Partnermarketing\Queue\Exception\TimeoutException;
 use Partnermarketing\Queue\Service\ListenerHandler;
 use Partnermarketing\Queue\Service\EntityConsumer;
 use Partnermarketing\Queue\Service\EventPublisher;
@@ -78,12 +79,10 @@ class EntityConsumerTest extends EntityManagerTestHelper
      */
     public function testExecute()
     {
-        $this->object->execute(['uuid' => 'test']);
-
-        $lastEntity = $this->reflect->getProperty('lastEntity');
-        $lastEntity->setAccessible(true);
-
-        $this->assertSame('test', $lastEntity->getValue($this->object));
+        $this->assertSame(
+            'test',
+            $this->object->execute(['uuid' => 'test'])
+        );
     }
 
     /**
@@ -100,9 +99,8 @@ class EntityConsumerTest extends EntityManagerTestHelper
      *
      * @param object $count The PHPUnit number of times we expect
      *      listenOnce() to be called on the listenerHandler
-     * @param ?string $lastEntity What to present the lastEntityt o
      */
-    private function setUpWaitForEntityTest($count, ?string $lastEntity)
+    private function setUpWaitForEntityTest($count, $will)
     {
         $listenerHandler = $this->getMockBuilder(ListenerHandler::class)
             ->disableOriginalConstructor()
@@ -121,32 +119,29 @@ class EntityConsumerTest extends EntityManagerTestHelper
         $listen = $listenerHandler->expects($count)
             ->method('listenOnce')
             ->with(20)
-            ->will($this->returnCallback(function() use ($self) {
-                static $i = 0;
-
-                if (++$i === 2) {
-                    $self->setProperty('lastEntity', '123');
-                }
-            }));
+            ->will($will);
 
         $listenerHandler->expects($this->once())
             ->method('deregisterListener')
             ->with($this->object);
 
         $this->setProperty('listenerHandler', $listenerHandler);
-        $this->setProperty('lastEntity', $lastEntity);
     }
 
     /**
-     * Tests that, when no lastEntity is set, the waitForEntity() method
-     * correctly realises it has timed out and throws an exception
+     * Tests that, when an exception is thrown, it is bubbled up and the
+     * listener is deregistered
      */
     public function testWaitForEntityTimeout()
     {
-        $this->setUpWaitForEntityTest($this->once(), null);
+        $this->setUpWaitForEntityTest(
+            $this->once(),
+            $this->returnCallback(function() {
+                throw new TimeoutException('Test');
+            })
+        );
 
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Waiting for entity timed out');
+        $this->expectException(TimeoutException::class);
 
         $this->invokeMethod('waitForEntity', ['123', 20]);
     }
@@ -157,7 +152,10 @@ class EntityConsumerTest extends EntityManagerTestHelper
      */
     public function testWaitForEntityTwoTries()
     {
-        $this->setUpWaitForEntityTest($this->exactly(2), 'test2');
+        $this->setUpWaitForEntityTest(
+            $this->exactly(2),
+            $this->onConsecutiveCalls('test', '123')
+        );
 
         $this->invokeMethod('waitForEntity', ['123', 20]);
     }
@@ -168,7 +166,10 @@ class EntityConsumerTest extends EntityManagerTestHelper
      */
     public function testWaitForEntitySuccess()
     {
-        $this->setUpWaitForEntityTest($this->once(), '123');
+        $this->setUpWaitForEntityTest(
+            $this->once(),
+            $this->onConsecutiveCalls('123')
+        );
 
         $this->invokeMethod('waitForEntity', ['123', 20]);
     }
@@ -243,7 +244,10 @@ class EntityConsumerTest extends EntityManagerTestHelper
     {
         $this->expectHMGet([null, ['foo' => 'bar']], $this->exactly(2));
         $this->expectAddEvent();
-        $this->setUpWaitForEntityTest($this->once(), '123');
+        $this->setUpWaitForEntityTest(
+            $this->once(),
+            $this->onConsecutiveCalls('123')
+        );
 
         $this->object->setTimeout(20);
 

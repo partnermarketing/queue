@@ -6,6 +6,7 @@ use RuntimeException;
 use Partnermarketing\Queue\Entity\Connection;
 use Partnermarketing\Queue\Entity\Stream;
 use Partnermarketing\Queue\Entity\Queue;
+use Partnermarketing\Queue\Exception\TimeoutException;
 use Partnermarketing\Queue\Listener\QueueListener;
 
 /**
@@ -26,13 +27,6 @@ class EntityConsumer extends EntityManager implements QueueListener
      * @var Queue
      */
     private $queue;
-
-    /**
-     * The id of the last entity returned
-     *
-     * @var string
-     */
-    private $lastEntity;
 
     /**
      * The listenerHandler used when waiting for entity notifications
@@ -82,9 +76,8 @@ class EntityConsumer extends EntityManager implements QueueListener
      */
     public function execute($event)
     {
-        $this->lastEntity = $event['uuid'];
+        return $event['uuid'];
     }
-
 
     /**
      * Blocks until it recieves an advertisment that the entity it wants
@@ -97,20 +90,22 @@ class EntityConsumer extends EntityManager implements QueueListener
     {
         $this->listenerHandler->registerListener($this);
 
-        while (true) {
-            $this->listenerHandler->listenOnce($timeout);
+        try {
+            while (true) {
+                $entity = $this->listenerHandler->listenOnce($timeout);
 
-            if (!$this->lastEntity) {
-                $this->listenerHandler->deregisterListener($this);
-                throw new RuntimeException(
-                    'Waiting for entity timed out'
-                );
-            } elseif ($this->lastEntity === $id) {
-                $this->listenerHandler->deregisterListener($this);
-                break;
-            } else {
-                $this->lastEntity = null;
+                if ($entity === $id) {
+                    break;
+                }
             }
+        } catch (TimeoutException $e) {
+            throw new TimeoutException(
+                'Timeout out waiting for entity',
+                0,
+                $e
+            );
+        } finally {
+            $this->listenerHandler->deregisterListener($this);
         }
     }
 
