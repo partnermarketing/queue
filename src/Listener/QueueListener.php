@@ -21,6 +21,7 @@ interface QueueListener
      * Executes when an event comes in
      *
      * @param array $event
+     * @return mixed Any return is acceptable
      */
     public function execute($event);
 }

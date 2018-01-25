@@ -6,6 +6,7 @@ use BadMethodCallException;
 use Partnermarketing\Queue\Service\ListenerHandler;
 use Partnermarketing\Queue\Entity\Queue;
 use Partnermarketing\Queue\Entity\Stream;
+use Partnermarketing\Queue\Exception\TimeoutException;
 use Partnermarketing\Queue\Listener\CallbackQueueListener;
 use PHPUnit\Framework\TestCase;
 use Redis;
@@ -89,11 +90,15 @@ class ListenerHandlerTest extends TestCase
 
     /**
      * The execute callback used by the listener, just saves the value
-     * into $this->event.
+     * into $this->event and returns a value
+     *
+     * @return string
      */
     public function executeCallback($event)
     {
         $this->event = $event;
+
+        return 'RETURN_VALUE';
     }
 
     /**
@@ -240,9 +245,96 @@ class ListenerHandlerTest extends TestCase
             ['test_stream:queues:test' => $this->getMockQueueListener()]
         );
 
-        $this->object->listenOnce(5);
+        $this->assertSame(
+            'RETURN_VALUE',
+            $this->object->listenOnce(5)
+        );
 
         $this->assertEquals(['event' => 'something'], $this->event);
+    }
+
+    /**
+     * Tests that when the connection returns nothing, it correctly
+     * identifies that a timeout has occured and throws an exception
+     */
+    public function testListenOnceTimeout()
+    {
+        $this->getListeners()->setValue(
+            $this->object,
+            ['test_stream:queues:test' => null]
+        );
+        $this->conn->expects($this->once())
+            ->method('brPop')
+            ->with(['test_stream:queues:test'], 25)
+            ->willReturn(null);
+        $this->expectException(TimeoutException::class);
+        $this->expectExceptionMessage('Timed out waiting for events');
+
+        $this->object->listenOnce(25);
+    }
+
+    /**
+     * Runs a test on the listen() method, confirming that it keeps
+     * calling listenOnce until an exception is returned
+     *
+     * @param string $throw The exception to throw
+     * @return ListenHandler A mocked ListenerHandler to test
+     */
+    private function setUpListenTest(string $throw) : ListenerHandler
+    {
+        $object = $this->getMockBuilder(ListenerHandler::class)
+            ->disableOriginalConstructor()
+            ->setMethods(['listenOnce'])
+            ->getMock();
+
+        $object->expects($this->exactly(3))
+            ->method('listenOnce')
+            ->with(25)
+            ->will($this->returnCallback(function() use ($throw) {
+                static $i;
+
+                if (++$i === 3) {
+                    throw new $throw('Test: 3rd reached');
+                }
+            }));
+
+        return $object;
+    }
+
+    /**
+     * Tests that listen() keeps calling listenOnce() until it throws an
+     * exception, and this is bubbled up
+     */
+    public function testListen()
+    {
+        $this->expectException(TimeoutException::class);
+        $this->expectExceptionMessage('Test: 3rd reached');
+
+        $this->setUpListenTest(TimeoutException::class)
+            ->listen(25, false);
+    }
+
+    /**
+     * Tests that when listen() is called with returnOnTimeout, a
+     * TimeoutException is not bubbled back up to the application
+     */
+    public function testListenReturnOnTimeout()
+    {
+        $this->setUpListenTest(TimeoutException::class)
+            ->listen(25, true);
+    }
+
+    /**
+     * Tests that when listen() is called with returnOnTimeout, other
+     * exceptions are still bubbled up
+     */
+    public function testListenOtherExceptions()
+    {
+        $this->expectException(BadMethodCallException::class);
+        $this->expectExceptionMessage('Test: 3rd reached');
+
+        $this->setUpListenTest(BadMethodCallException::class)
+            ->listen(25, true);
     }
 }
 

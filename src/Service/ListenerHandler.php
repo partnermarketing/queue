@@ -3,6 +3,7 @@
 namespace Partnermarketing\Queue\Service;
 
 use BadMethodCallException;
+use Partnermarketing\Queue\Exception\TimeoutException;
 use Partnermarketing\Queue\Listener\QueueListener;
 use Partnermarketing\Queue\Entity\Queue;
 
@@ -71,11 +72,19 @@ class ListenerHandler extends RedisService
      * listening again
      *
      * @param int $timeout The timeout to listen for, or 0 for forever
+     * @param bool $returnOnTimeout If true, a timeout will just return
+     * @throws TimeoutException If the connection timed out
      */
-    public function listen($timeout = 0)
+    public function listen($timeout = 0, $returnOnTimeout = false)
     {
-        while (true) {
-            $this->listenOnce($timeout);
+        try {
+            while (true) {
+                $this->listenOnce($timeout);
+            }
+        } catch (TimeoutException $e) {
+            if (!$returnOnTimeout) {
+                throw $e;
+            }
         }
     }
 
@@ -83,6 +92,8 @@ class ListenerHandler extends RedisService
      * Listens for one event on any queue, handles it, then returns
      *
      * @param int $timeout The timeout to listen for, or 0 for forever
+     * @return mixed The return of the executed method
+     * @throws TimeoutException If the connection timed out
      */
     public function listenOnce($timeout = 0)
     {
@@ -91,7 +102,11 @@ class ListenerHandler extends RedisService
             $timeout
         );
 
-        $this->listeners[$event[0]]->execute(
+        if (!$event) {
+            throw new TimeoutException('Timed out waiting for events');
+        }
+
+        return $this->listeners[$event[0]]->execute(
             json_decode($event[1], true)
         );
     }

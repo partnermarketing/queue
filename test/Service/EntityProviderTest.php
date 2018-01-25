@@ -11,7 +11,7 @@ use ReflectionProperty;
 /**
  * Tests that the EntityProvider service works as expected
  */
-class EntityProviderTest extends EntityManagerTest
+class EntityProviderTest extends EntityManagerTestHelper
 {
     /**
      * The mock Redis connection that is injected into the handler

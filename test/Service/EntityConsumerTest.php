@@ -3,13 +3,16 @@
 namespace Partnermarketing\Queue\Test\Service;
 
 use RuntimeException;
+use Partnermarketing\Queue\Entity\Connection;
 use Partnermarketing\Queue\Entity\Stream;
 use Partnermarketing\Queue\Entity\Queue;
+use Partnermarketing\Queue\Exception\TimeoutException;
+use Partnermarketing\Queue\Service\ListenerHandler;
 use Partnermarketing\Queue\Service\EntityConsumer;
 use Partnermarketing\Queue\Service\EventPublisher;
 use ReflectionClass;
 
-class EntityConsumerTest extends EntityManagerTest
+class EntityConsumerTest extends EntityManagerTestHelper
 {
     /**
      * The response queue the EntityConsumer listens on when waiting for
@@ -41,6 +44,28 @@ class EntityConsumerTest extends EntityManagerTest
         $this->setProperty('conn', $this->conn);
     }
 
+    public function testConstructor()
+    {
+        $conn = new Connection();
+        $this->object = new EntityConsumer($conn, 'type');
+
+        $this->assertSame(
+            'type_response',
+            $this->object->getQueue()->getStream()->getName()
+        );
+        $this->assertSame(
+            1,
+            preg_match(
+                '/^[0-9a-z]{13}$/',
+                $this->object->getQueue()->getName()
+            )
+        );
+        $this->assertInstanceOf(
+            ListenerHandler::class,
+            $this->getProperty('listenerHandler')
+        );
+    }
+
     /**
      * Tests that getQueue() returns the queue object that was set
      */
@@ -54,12 +79,10 @@ class EntityConsumerTest extends EntityManagerTest
      */
     public function testExecute()
     {
-        $this->object->execute(['uuid' => 'test']);
-
-        $lastEntity = $this->reflect->getProperty('lastEntity');
-        $lastEntity->setAccessible(true);
-
-        $this->assertSame('test', $lastEntity->getValue($this->object));
+        $this->assertSame(
+            'test',
+            $this->object->execute(['uuid' => 'test'])
+        );
     }
 
     /**
@@ -76,9 +99,8 @@ class EntityConsumerTest extends EntityManagerTest
      *
      * @param object $count The PHPUnit number of times we expect
      *      listenOnce() to be called on the listenerHandler
-     * @param ?string $lastEntity What to present the lastEntityt o
      */
-    private function setUpWaitForEntityTest($count, ?string $lastEntity)
+    private function setUpWaitForEntityTest($count, $will)
     {
         $listenerHandler = $this->getMockBuilder(ListenerHandler::class)
             ->disableOriginalConstructor()
@@ -97,32 +119,29 @@ class EntityConsumerTest extends EntityManagerTest
         $listen = $listenerHandler->expects($count)
             ->method('listenOnce')
             ->with(20)
-            ->will($this->returnCallback(function() use ($self) {
-                static $i = 0;
-
-                if (++$i === 2) {
-                    $self->setProperty('lastEntity', '123');
-                }
-            }));
+            ->will($will);
 
         $listenerHandler->expects($this->once())
             ->method('deregisterListener')
             ->with($this->object);
 
         $this->setProperty('listenerHandler', $listenerHandler);
-        $this->setProperty('lastEntity', $lastEntity);
     }
 
     /**
-     * Tests that, when no lastEntity is set, the waitForEntity() method
-     * correctly realises it has timed out and throws an exception
+     * Tests that, when an exception is thrown, it is bubbled up and the
+     * listener is deregistered
      */
     public function testWaitForEntityTimeout()
     {
-        $this->setUpWaitForEntityTest($this->once(), null);
+        $this->setUpWaitForEntityTest(
+            $this->once(),
+            $this->returnCallback(function() {
+                throw new TimeoutException('Test');
+            })
+        );
 
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Waiting for entity timed out');
+        $this->expectException(TimeoutException::class);
 
         $this->invokeMethod('waitForEntity', ['123', 20]);
     }
@@ -133,7 +152,10 @@ class EntityConsumerTest extends EntityManagerTest
      */
     public function testWaitForEntityTwoTries()
     {
-        $this->setUpWaitForEntityTest($this->exactly(2), 'test2');
+        $this->setUpWaitForEntityTest(
+            $this->exactly(2),
+            $this->onConsecutiveCalls('test', '123')
+        );
 
         $this->invokeMethod('waitForEntity', ['123', 20]);
     }
@@ -144,7 +166,10 @@ class EntityConsumerTest extends EntityManagerTest
      */
     public function testWaitForEntitySuccess()
     {
-        $this->setUpWaitForEntityTest($this->once(), '123');
+        $this->setUpWaitForEntityTest(
+            $this->once(),
+            $this->onConsecutiveCalls('123')
+        );
 
         $this->invokeMethod('waitForEntity', ['123', 20]);
     }
@@ -219,7 +244,10 @@ class EntityConsumerTest extends EntityManagerTest
     {
         $this->expectHMGet([null, ['foo' => 'bar']], $this->exactly(2));
         $this->expectAddEvent();
-        $this->setUpWaitForEntityTest($this->once(), '123');
+        $this->setUpWaitForEntityTest(
+            $this->once(),
+            $this->onConsecutiveCalls('123')
+        );
 
         $this->object->setTimeout(20);
 

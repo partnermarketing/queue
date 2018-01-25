@@ -3,89 +3,102 @@
 namespace Partnermarketing\Queue\Test\Service;
 
 use RuntimeException;
+use Partnermarketing\Queue\Entity\Connection;
 use Partnermarketing\Queue\Entity\Stream;
 use Partnermarketing\Queue\Entity\Queue;
 use Partnermarketing\Queue\Service\EntityConsumer;
+use Partnermarketing\Queue\Service\EntityManager;
 use Partnermarketing\Queue\Service\EventPublisher;
+use Partnermarketing\Queue\Test\Mock\EntityManagerStub;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 
-class EntityManagerTest extends TestCase
+/**
+ * Tests that the methods in the EntityManger work as expected
+ */
+class EntityManagerTest extends EntityManagerTestHelper
 {
     /**
-     * A reflector for the EntityConsumer
-     *
-     * @var ReflectionClass
+     * Sets up a mocked version of the service for testing without the
+     * constructor
      */
-    protected $reflect;
-
-    /**
-     * The instance of the EntityConsumer service that we are testing
-     *
-     * @var EntityConsumer
-     */
-    protected $object;
-
-    /**
-     * The response queue the EntityConsumer listens on when waiting for
-     * an entity
-     *
-     * @var Queue
-     */
-    private $queue;
-
-    /**
-     * A mock eventPublisher to be used by the service
-     *
-     * @var EventPublisher
-     */
-    protected $eventPublisher;
-
-    /**
-     * Sets a property on the service, even if it is private
-     *
-     * @param string $property The property to set
-     * @param mixed $value The value to set
-     */
-    protected function setProperty(string $property, $value) : void
+    private function setUpMockedObject() : void
     {
-        $prop = $this->reflect->getProperty($property);
-        $prop->setAccessible(true);
-        $prop->setValue($this->object, $value);
+        $this->object = $this->getMockBuilder(EntityManager::class)
+            ->disableOriginalConstructor()
+            ->getMockForAbstractClass();
+
+        $this->setProperty('type', 'entity');
     }
 
     /**
-     * Invokes a method on the service with the given arguments, even if
-     * it is priviate, and returns its response
-     *
-     * @param string $methodName The method to test
-     * @param array $args The arguments to give to the method
-     * @return mixed The return of the method call
+     * Runs basic setup tasks by setting the test mode and setups up the
+     * reflector
      */
-    protected function invokeMethod(string $methodName, array $args)
+    public function setUp() : void
     {
-        $method = $this->reflect->getMethod($methodName);
-        $method->setAccessible(true);
-        return $method->invokeArgs($this->object, $args);
-    }
-
-    protected function setUpEventPublisher()
-    {
-        $this->eventPublisher =
-            $this->getMockBuilder(EventPublisher::class)
-                ->disableOriginalConstructor()
-                ->setMethods(['addEvent'])
-                ->getMock();
-        $this->setProperty('eventPublisher', $this->eventPublisher);
+        EntityManager::setTestMode();
+        $this->reflect = new ReflectionClass(EntityManager::class);
     }
 
     /**
-     * Expects that the service will add an event to the request queue
+     * Tests that the constructor setups up properly
      */
-    protected function expectAddEvent()
+    public function testConstructor() : void
     {
-        $this->eventPublisher->expects($this->once())
-            ->method('addEvent')
-            ->with(['uuid' => '123']);
+        $conn = new Connection();
+        $object = new EntityManagerStub($conn, 'type');
+        $this->object = $object->getEventPublisher();
+
+        $this->assertSame($conn, $object->getDetails());
+        $this->assertSame('type', $object->getType());
+        $this->assertInstanceOf(
+            EventPublisher::class,
+            $this->object
+        );
+
+        $this->reflect = new ReflectionClass(EventPublisher::class);
+        $this->assertSame(
+            'type_test',
+            $this->getProperty('stream')->getName()
+        );
+    }
+
+    /**
+     * Tests the getHash method
+     */
+    public function testGetHash() : void
+    {
+        $this->setUpMockedObject();
+        $this->assertSame(
+            'entity:123',
+            $this->invokeMethod('getHash', ['123'])
+        );
+    }
+
+    /**
+     * Tests that getRequestStream returns the request stream for the
+     * EntityManager type
+     */
+    public function testGetRequestStream() : void
+    {
+        $this->setUpMockedObject();
+        $this->assertEquals(
+            new Stream('entity_request'),
+            $this->invokeMethod('getRequestStream', [])
+        );
+    }
+
+    /**
+     * Tests that getResponseStream returns the response stream for the
+     * EntityManager type
+     */
+    public function testGetResponseStream()
+    {
+        $this->setUpMockedObject();
+        $this->assertEquals(
+            new Stream('entity_response'),
+            $this->invokeMethod('getResponseStream', [])
+        );
     }
 }
