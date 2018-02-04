@@ -4,6 +4,8 @@ namespace Partnermarketing\Queue\Test\Service;
 
 use BadMethodCallException;
 use Partnermarketing\Queue\Service\ListenerHandler;
+use Partnermarketing\Queue\Service\RedisService;
+use Partnermarketing\Queue\Entity\Connection;
 use Partnermarketing\Queue\Entity\Queue;
 use Partnermarketing\Queue\Entity\Stream;
 use Partnermarketing\Queue\Exception\TimeoutException;
@@ -74,6 +76,46 @@ class ListenerHandlerTest extends TestCase
         $conn->setValue($this->object, $this->conn);
 
         $this->queue = new Queue('test', new Stream('test_stream'));
+    }
+
+    /**
+     * Tests that the default get and setters work as expected
+     */
+    public function testDefaults()
+    {
+        ListenerHandler::setDefault($this->object);
+
+        $this->assertSame($this->object, ListenerHandler::getDefault());
+    }
+
+    /**
+     * Tests that the constructor does not amend the default if it has
+     * already been set
+     */
+    public function testConstructorDefaultAlreadySet()
+    {
+        RedisService::setTestMode();
+        ListenerHandler::setDefault($this->object);
+
+        new ListenerHandler(new Connection());
+
+        $this->assertSame($this->object, ListenerHandler::getDefault());
+    }
+
+    /**
+     * Tests that the constructor sets the default if it has not already
+     * been set
+     */
+    public function testConstructorDefaultNotSet()
+    {
+        RedisService::setTestMode();
+        $default = $this->reflect->getProperty('default');
+        $default->setAccessible(true);
+        $default->setValue(null);
+
+        $handler = new ListenerHandler(new Connection());
+
+        $this->assertSame($handler, ListenerHandler::getDefault());
     }
 
     /**
