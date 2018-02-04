@@ -162,8 +162,14 @@ class ListenerHandler extends RedisService
             throw new TimeoutException('Timed out waiting for events');
         }
 
-        return $this->listeners[$event[0]]->execute(
-            json_decode($event[1], true)
-        );
+        $listener = $this->listeners[$event[0]];
+
+        $return = $listener->execute(json_decode($event[1], true));
+
+        if ($listener->isComplete()) {
+            $this->deregisterListener($listener);
+        }
+
+        return $return;
     }
 }

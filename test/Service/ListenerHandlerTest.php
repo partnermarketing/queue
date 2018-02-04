@@ -125,10 +125,15 @@ class ListenerHandlerTest extends TestCase
      */
     private function getMockQueueListener()
     {
-        return new CallbackQueueListener(
-            $this->queue,
-            [$this, 'executeCallback']
-        );
+        $listener = $this->getMockBuilder(CallbackQueueListener::class)
+            ->setConstructorArgs([
+                $this->queue,
+                [$this, 'executeCallback']
+            ])
+            ->setMethods(['isComplete'])
+            ->getMock();
+
+        return $listener;
     }
 
     /**
@@ -265,6 +270,25 @@ class ListenerHandlerTest extends TestCase
      */
     public function testListenOnce()
     {
+        $this->runListenTest(false);
+    }
+
+    /**
+     * Tests that the listenOnce() method works as expected and also
+     * deregisters the listener if it says it is complete
+     */
+    public function testListenOnceComplete()
+    {
+        $this->runListenTest(true);
+    }
+
+    /**
+     * Runs a listenOnce() test
+     *
+     * @param bool $complete If the listener should report as completed
+     */
+    private function runListenTest($complete)
+    {
         $self = $this;
         $this->conn->expects($this->once())
             ->method('brPop')
@@ -283,15 +307,30 @@ class ListenerHandlerTest extends TestCase
                 }
             ));
 
+        $listener = $this->getMockQueueListener();
+        $listener->expects($this->once())
+            ->method('isComplete')
+            ->willReturn($complete);
+
         $this->getListeners()->setValue(
             $this->object,
-            ['test_stream:queues:test' => $this->getMockQueueListener()]
+            ['test_stream:queues:test' => $listener]
         );
 
         $this->assertSame(
             'RETURN_VALUE',
             $this->object->listenOnce(5)
         );
+
+        if ($complete) {
+            $this->assertEmpty(
+                $this->getListeners()->getValue($this->object)
+            );
+        } else {
+            $this->assertNotEmpty(
+                $this->getListeners()->getValue($this->object)
+            );
+        }
 
         $this->assertEquals(['event' => 'something'], $this->event);
     }

@@ -6,6 +6,7 @@ use Partnermarketing\Queue\Entity\Queue;
 use Partnermarketing\Queue\Entity\Stream;
 use Partnermarketing\Queue\Listener\CallbackQueueListener;
 use PHPUnit\Framework\TestCase;
+use ReflectionClass;
 
 /**
  * Tests that the CallbackQueueListener (and by extension the
@@ -75,5 +76,26 @@ class CallbackQueueListenerTest extends TestCase
         );
 
         $this->assertEquals($array, $this->event);
+    }
+
+    /**
+     * Tests that isComplete() initially reports as false
+     */
+    public function testIsCompleteDefaultsToFalse()
+    {
+        $this->assertFalse($this->listener->isComplete());
+    }
+
+    /**
+     * Tests that when complete is set, isComplete() reports as true
+     */
+    public function testIsCompleteTrue()
+    {
+        $reflect = new ReflectionClass(CallbackQueueListener::class);
+        $complete = $reflect->getProperty('complete');
+        $complete->setAccessible(true);
+        $complete->setValue($this->listener, true);
+
+        $this->assertTrue($this->listener->isComplete());
     }
 }
