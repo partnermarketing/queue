@@ -8,6 +8,7 @@ use Partnermarketing\Queue\Service\RedisService;
 use Partnermarketing\Queue\Entity\Connection;
 use Partnermarketing\Queue\Entity\Queue;
 use Partnermarketing\Queue\Entity\Stream;
+use Partnermarketing\Queue\Exception\NoListenersException;
 use Partnermarketing\Queue\Exception\TimeoutException;
 use Partnermarketing\Queue\Listener\CallbackQueueListener;
 use PHPUnit\Framework\TestCase;
@@ -296,6 +297,16 @@ class ListenerHandlerTest extends TestCase
     }
 
     /**
+     * Tests that when listenOnce() is called without any registered
+     * listeners, it just throws an exception
+     */
+    public function testListenOnceNoListeners()
+    {
+        $this->expectException(NoListenersException::class);
+        $this->object->listenOnce();
+    }
+
+    /**
      * Tests that when the connection returns nothing, it correctly
      * identifies that a timeout has occured and throws an exception
      */
@@ -354,6 +365,15 @@ class ListenerHandlerTest extends TestCase
 
         $this->setUpListenTest(TimeoutException::class)
             ->listen(25, false);
+    }
+
+    /**
+     * Tests that when listen() runs without any listeners it simply
+     * exits the loop
+     */
+    public function testListenNoListeners()
+    {
+        $this->object->listen();
     }
 
     /**

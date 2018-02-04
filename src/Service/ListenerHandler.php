@@ -3,6 +3,7 @@
 namespace Partnermarketing\Queue\Service;
 
 use BadMethodCallException;
+use Partnermarketing\Queue\Exception\NoListenersException;
 use Partnermarketing\Queue\Exception\TimeoutException;
 use Partnermarketing\Queue\Listener\QueueListener;
 use Partnermarketing\Queue\Entity\Connection;
@@ -134,6 +135,8 @@ class ListenerHandler extends RedisService
             if (!$returnOnTimeout) {
                 throw $e;
             }
+        } catch (NoListenersException $e) {
+            return;
         }
     }
 
@@ -146,6 +149,10 @@ class ListenerHandler extends RedisService
      */
     public function listenOnce($timeout = 0)
     {
+        if (!count($this->listeners)) {
+            throw new NoListenersException();
+        }
+
         $event = $this->conn->brPop(
             array_keys($this->listeners),
             $timeout
