@@ -30,7 +30,7 @@ class EntityProviderTest extends EntityManagerTestHelper
 
         $this->conn = $this->getMockBuilder(Redis::class)
             ->disableOriginalConstructor()
-            ->setMethods(['hMSet', 'publish'])
+            ->setMethods(['hMSet', 'publish', 'setTimeout'])
             ->getMock();
 
         $this->setUpEventPublisher();
@@ -52,6 +52,10 @@ class EntityProviderTest extends EntityManagerTestHelper
         $this->conn->expects($this->once())
             ->method('hMSet')
             ->with('entity:123', ['uuid' => '123', 'data' => 1]);
+
+        $this->conn->expects($this->once())
+            ->method('setTimeout')
+            ->with('entity:123', 600);
     }
 
     /**
@@ -89,7 +93,7 @@ class EntityProviderTest extends EntityManagerTestHelper
     /**
      * Tests that, when adviertising, the event is advertised
      */
-    public function testSaveWIthAdvertising()
+    public function testSaveWithAdvertising()
     {
         $this->expectHMSet();
         $this->expectAddEvent();
