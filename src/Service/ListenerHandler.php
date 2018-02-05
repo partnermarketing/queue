@@ -3,8 +3,10 @@
 namespace Partnermarketing\Queue\Service;
 
 use BadMethodCallException;
+use Partnermarketing\Queue\Exception\NoListenersException;
 use Partnermarketing\Queue\Exception\TimeoutException;
 use Partnermarketing\Queue\Listener\QueueListener;
+use Partnermarketing\Queue\Entity\Connection;
 use Partnermarketing\Queue\Entity\Queue;
 
 /**
@@ -14,9 +16,57 @@ use Partnermarketing\Queue\Entity\Queue;
 class ListenerHandler extends RedisService
 {
     /**
+     * The default ListenerHandler used for this session
+     *
+     * This is useful for the EntityConsumer which needs to hook into
+     * the running ListenerHandler
+     *
+     * @var ListenerHandler
+     */
+    private static $default;
+
+    /**
+     * Set the default ListenerHandler for the application
+     *
+     * EntityConsumers will use this by default if no listenerhandler is
+     * provided
+     *
+     * @param ListenerHandler $listenerHandler
+     */
+    public static function setDefault(ListenerHandler $listenerHandler)
+    {
+        static::$default = $listenerHandler;
+    }
+
+    /**
+     * Gets the default ListenerHandler for the application
+     *
+     * @return ListenerHandler
+     */
+    public static function getDefault()
+    {
+        return static::$default;
+    }
+
+    /**
      * The list of listeners on this connection
      */
     private $listeners = [];
+
+    /**
+     * Constructs this Service, setting it as the default if it has not
+     * yet been set
+     *
+     * @param Connection $details
+     */
+    public function __construct(Connection $details)
+    {
+        parent::__construct($details);
+
+        if (!static::$default) {
+            static::setDefault($this);
+        }
+    }
 
     /**
      * Register a new Listener
@@ -85,6 +135,8 @@ class ListenerHandler extends RedisService
             if (!$returnOnTimeout) {
                 throw $e;
             }
+        } catch (NoListenersException $e) {
+            return;
         }
     }
 
@@ -97,6 +149,10 @@ class ListenerHandler extends RedisService
      */
     public function listenOnce($timeout = 0)
     {
+        if (!count($this->listeners)) {
+            throw new NoListenersException();
+        }
+
         $event = $this->conn->brPop(
             array_keys($this->listeners),
             $timeout
@@ -106,8 +162,14 @@ class ListenerHandler extends RedisService
             throw new TimeoutException('Timed out waiting for events');
         }
 
-        return $this->listeners[$event[0]]->execute(
-            json_decode($event[1], true)
-        );
+        $listener = $this->listeners[$event[0]];
+
+        $return = $listener->execute(json_decode($event[1], true));
+
+        if ($listener->isComplete()) {
+            $this->deregisterListener($listener);
+        }
+
+        return $return;
     }
 }

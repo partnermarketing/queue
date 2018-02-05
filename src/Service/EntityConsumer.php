@@ -7,12 +7,13 @@ use Partnermarketing\Queue\Entity\Connection;
 use Partnermarketing\Queue\Entity\Stream;
 use Partnermarketing\Queue\Entity\Queue;
 use Partnermarketing\Queue\Exception\TimeoutException;
-use Partnermarketing\Queue\Listener\QueueListener;
+use Partnermarketing\Queue\Listener\EntityListener;
+use Partnermarketing\Queue\Listener\EntityQueueListener;
 
 /**
  * A service that is able to read and request entity data from redis
  */
-class EntityConsumer extends EntityManager implements QueueListener
+class EntityConsumer extends EntityManager
 {
     /**
      * The type of Stream that this sends event to
@@ -35,32 +36,20 @@ class EntityConsumer extends EntityManager implements QueueListener
      */
     private $listenerHandler;
 
-    /**
-     * The default timeout to wait for entities
-     *
-     * @var int
-     */
-    private $timeout = 10;
-
-    public function __construct(Connection $details, $type)
-    {
+    public function __construct(
+        Connection $details,
+        $type,
+        ListenerHandler $listenerHandler = null
+    ) {
         parent::__construct($details, $type);
 
-        $this->listenerHandler = new ListenerHandler($details);
         $this->queue = new Queue(uniqid(), $this->getResponseStream());
-    }
 
-    /**
-     * Sets the timeout to be used when waiting for entities
-     *
-     * @var int $timeout
-     * @return EntityConsumer $this
-     */
-    public function setTimeout($timeout)
-    {
-        $this->timeout = $timeout;
-
-        return $this;
+        if ($listenerHandler) {
+            $this->listenerHandler = $listenerHandler;
+        } else {
+            $this->listenerHandler = ListenerHandler::getDefault();
+        }
     }
 
     /**
@@ -72,94 +61,45 @@ class EntityConsumer extends EntityManager implements QueueListener
     }
 
     /**
-     * {@inheritDoc}
-     */
-    public function execute($event)
-    {
-        return $event['uuid'];
-    }
-
-    /**
-     * Blocks until it recieves an advertisment that the entity it wants
-     * has been created
-     *
-     * @param string $id The entity to wait for
-     * @param int $timeout The time to wait
-     */
-    private function waitForEntity($id, $timeout = 10)
-    {
-        $this->listenerHandler->registerListener($this);
-
-        try {
-            while (true) {
-                $entity = $this->listenerHandler->listenOnce($timeout);
-
-                if ($entity === $id) {
-                    break;
-                }
-            }
-        } catch (TimeoutException $e) {
-            throw new TimeoutException(
-                'Timeout out waiting for entity',
-                0,
-                $e
-            );
-        } finally {
-            $this->listenerHandler->deregisterListener($this);
-        }
-    }
-
-    /**
      * Gets data from the redis hash
      *
      * @param string $id
-     * @param array $items
      * @return array The requested data
      */
-    private function getData($id, $items)
+    public function getData($id)
     {
-        $data = $this->conn->hMGet($this->getHash($id), $items);
+        $data = $this->conn->hGetAll($this->getHash($id));
 
         return !count($data) ? null : $data;
     }
 
     /**
-     * Tries to load a single data value for the entity, optionally
-     * requsting it if it does not already exist
+     * Instructs the consumer that it wants to do something with the
+     * given entity
      *
-     * @param string $id The id of the entity to get
-     * @param string $item The field to get
-     * @param boolean $request If to request it if not present
-     * @return mixed The value
-     * @see getEntityValues()
-     */
-    public function getEntityValue($id, $item, $request = true)
-    {
-        $data = $this->getEntityValues($id, [$item], $request);
-
-        return $data[$item];
-    }
-
-    /**
-     * Tries to load the data for the given entity, optionally
-     * requesting if it does not already exist
+     * If the entity exists, the given listener is executed straight
+     * away, otherwise it will be added to the listener handler
      *
-     * @param string $id The id of the entity to get
-     * @param array $items The items of the entity to get
-     * @param boolean $request If to request it if not present
-     * @return array The requested data
+     * @param string $id
+     * @param EntityListener $listener
      */
-    public function getEntityValues($id, $items, $request = true)
-    {
-        $data = $this->getData($id, $items);
+    public function withEntityValues(
+        $id,
+        EntityListener $listener
+    ) {
+        $data = $this->getData($id);
 
-        if (!$request || $data) {
-            return $data;
+        if ($data) {
+            $listener->withEntity($data);
+        } else {
+            $this->advertise($id);
+            $this->listenerHandler->registerListener(
+                new EntityQueueListener(
+                    $this,
+                    $id,
+                    $listener
+                )
+            );
         }
-
-        $this->advertise($id);
-        $this->waitForEntity($id, $this->timeout);
-
-        return $this->getData($id, $items);
     }
 }

@@ -6,6 +6,8 @@ use RuntimeException;
 use Partnermarketing\Queue\Entity\Connection;
 use Partnermarketing\Queue\Entity\Stream;
 use Partnermarketing\Queue\Entity\Queue;
+use Partnermarketing\Queue\Listener\EntityListener;
+use Partnermarketing\Queue\Listener\EntityQueueListener;
 use Partnermarketing\Queue\Exception\TimeoutException;
 use Partnermarketing\Queue\Service\ListenerHandler;
 use Partnermarketing\Queue\Service\EntityConsumer;
@@ -23,6 +25,13 @@ class EntityConsumerTest extends EntityManagerTestHelper
     private $queue;
 
     /**
+     * The mock ListenerHandler used by the entity consumer
+     *
+     * @var ListenerHandler
+     */
+    private $listener;
+
+    /**
      * Sets up the service being tested
      */
     public function setUp() : void
@@ -32,7 +41,7 @@ class EntityConsumerTest extends EntityManagerTestHelper
 
         $this->conn = $this->getMockBuilder(Redis::class)
             ->disableOriginalConstructor()
-            ->setMethods(['hMGet'])
+            ->setMethods(['hGetAll'])
             ->getMock();
 
         $this->setUpEventPublisher();
@@ -44,10 +53,15 @@ class EntityConsumerTest extends EntityManagerTestHelper
         $this->setProperty('conn', $this->conn);
     }
 
-    public function testConstructor()
+    /**
+     * Tests that when the constructor is given a listenerhandler, that
+     * is used and the rest of the object is constructed
+     */
+    public function testConstructorWithListenerHandler()
     {
         $conn = new Connection();
-        $this->object = new EntityConsumer($conn, 'type');
+        $handler = new ListenerHandler($conn);
+        $this->object = new EntityConsumer($conn, 'type', $handler);
 
         $this->assertSame(
             'type_response',
@@ -60,8 +74,25 @@ class EntityConsumerTest extends EntityManagerTestHelper
                 $this->object->getQueue()->getName()
             )
         );
-        $this->assertInstanceOf(
-            ListenerHandler::class,
+        $this->assertSame(
+            $handler,
+            $this->getProperty('listenerHandler')
+        );
+    }
+
+    /**
+     * Tests that when the constructor is not given a listener handler,
+     * it uses the default
+     */
+    public function testConstructorWithoutListnerHandler()
+    {
+        $conn = new Connection();
+        $handler = new ListenerHandler($conn);
+        ListenerHandler::setDefault($handler);
+        $this->object = new EntityConsumer($conn, 'type');
+
+        $this->assertSame(
+            $handler,
             $this->getProperty('listenerHandler')
         );
     }
@@ -75,17 +106,6 @@ class EntityConsumerTest extends EntityManagerTestHelper
     }
 
     /**
-     * Tests that execute() saves the uuid in the event
-     */
-    public function testExecute()
-    {
-        $this->assertSame(
-            'test',
-            $this->object->execute(['uuid' => 'test'])
-        );
-    }
-
-    /**
      * Tests that adverise() adds an event to the request stream
      */
     public function testAdvertise()
@@ -95,96 +115,16 @@ class EntityConsumerTest extends EntityManagerTestHelper
     }
 
     /**
-     * Sets up a test on the waitForEntity() tests
-     *
-     * @param object $count The PHPUnit number of times we expect
-     *      listenOnce() to be called on the listenerHandler
-     */
-    private function setUpWaitForEntityTest($count, $will)
-    {
-        $listenerHandler = $this->getMockBuilder(ListenerHandler::class)
-            ->disableOriginalConstructor()
-            ->setMethods([
-                'registerListener',
-                'deregisterListener',
-                'listenOnce'
-            ])
-            ->getMock();
-
-        $listenerHandler->expects($this->once())
-            ->method('registerListener')
-            ->with($this->object);
-
-        $self = $this;
-        $listen = $listenerHandler->expects($count)
-            ->method('listenOnce')
-            ->with(20)
-            ->will($will);
-
-        $listenerHandler->expects($this->once())
-            ->method('deregisterListener')
-            ->with($this->object);
-
-        $this->setProperty('listenerHandler', $listenerHandler);
-    }
-
-    /**
-     * Tests that, when an exception is thrown, it is bubbled up and the
-     * listener is deregistered
-     */
-    public function testWaitForEntityTimeout()
-    {
-        $this->setUpWaitForEntityTest(
-            $this->once(),
-            $this->returnCallback(function() {
-                throw new TimeoutException('Test');
-            })
-        );
-
-        $this->expectException(TimeoutException::class);
-
-        $this->invokeMethod('waitForEntity', ['123', 20]);
-    }
-
-    /**
-     * Tests that, if the first time the listenOnce() method is used,
-     * the wrong entity is returned, it tries again
-     */
-    public function testWaitForEntityTwoTries()
-    {
-        $this->setUpWaitForEntityTest(
-            $this->exactly(2),
-            $this->onConsecutiveCalls('test', '123')
-        );
-
-        $this->invokeMethod('waitForEntity', ['123', 20]);
-    }
-
-    /**
-     * Tests that, if on the first time, the write entity is returned,
-     * it immediately breaks
-     */
-    public function testWaitForEntitySuccess()
-    {
-        $this->setUpWaitForEntityTest(
-            $this->once(),
-            $this->onConsecutiveCalls('123')
-        );
-
-        $this->invokeMethod('waitForEntity', ['123', 20]);
-    }
-
-    /**
-     * Expects that a REDIS HMGET call will be made
+     * Expects that a REDIS HGETALL call will be made
      *
      * @param array $data The data to return on consecutive calls
      * @param object $count The PHPUnit number of times we expect it
      */
-    private function expectHMGet(array $data, $count = null)
+    private function expectHGetAll(array $data, $count = null)
     {
         $this->conn->expects($count ?? $this->once())
-            ->method('hMGet')
-            ->with('entity:123', ['foo'])
+            ->method('hGetAll')
+            ->with('entity:123')
             ->will($this->onConsecutiveCalls(...$data));
     }
 
@@ -194,7 +134,7 @@ class EntityConsumerTest extends EntityManagerTestHelper
      */
     public function testGetDataWithData()
     {
-        $this->expectHMGet([['foo' => 'bar']]);
+        $this->expectHGetAll([['foo' => 'bar']]);
         $this->assertSame(
             ['foo' => 'bar'],
             $this->invokeMethod('getData', ['123', ['foo']])
@@ -206,79 +146,86 @@ class EntityConsumerTest extends EntityManagerTestHelper
      */
     public function testGetDataWithoutData()
     {
-        $this->expectHMGet([[]]);
+        $this->expectHGetAll([[]]);
         $this->assertNull(
             $this->invokeMethod('getData', ['123', ['foo']])
         );
     }
 
     /**
-     * Tests that if there is data, getEntityValues returns this
+     * Gets a mock EntityListener for the EntityConsumer
+     *
+     * @return EntityListener
      */
-    public function testGetEntityValuesFirstTry()
+    private function getMockEntityListener()
     {
-        $this->expectHMGet([['foo' => 'bar']]);
-
-        $this->assertSame(
-            ['foo' => 'bar'],
-            $this->object->getEntityValues('123', ['foo'])
-        );
+        return $this->getMockBuilder(EntityListener::class)
+            ->disableOriginalConstructor()
+            ->setMethods(['withEntity'])
+            ->getMock();
     }
 
     /**
-     * Tests that if there is no data, null is returned if request is
-     * false
+     * Tests that if the data exists, it just calls the withEntity() on
+     * it straight away
      */
-    public function testGetEntityValuesNoRequest()
+    public function testWithEntityValuesExists()
     {
-        $this->expectHMGet([null]);
-        $this->assertNull(
-            $this->object->getEntityValues('123', ['foo'], false)
-        );
+        $this->expectHGetAll([['foo' => 'bar']]);
+        $listener = $this->getMockEntityListener();
+        $listener->expects($this->once())
+            ->method('withEntity')
+            ->with(['foo' => 'bar']);
+
+        $this->object->withEntityValues('123', $listener);
     }
 
     /**
-     * Tests that if no data is returned, it will request the entity
+     * Tests that if the data does not exist, it asks for it, then sets
+     * up a listener for it
      */
-    public function testGetEntityValuesRequest()
+    public function testWithEntityValuesNotExists()
     {
-        $this->expectHMGet([null, ['foo' => 'bar']], $this->exactly(2));
         $this->expectAddEvent();
-        $this->setUpWaitForEntityTest(
-            $this->once(),
-            $this->onConsecutiveCalls('123')
-        );
+        $this->expectHGetAll([[]]);
 
-        $this->object->setTimeout(20);
+        $handler = $this->getMockBuilder(ListenerHandler::class)
+            ->disableOriginalConstructor()
+            ->setMethods(['registerListener'])
+            ->getMock();
 
-        $this->assertSame(
-            ['foo' => 'bar'],
-            $this->object->getEntityValues('123', ['foo'])
-        );
+        $handler->expects($this->once())
+            ->method('registerListener')
+            ->will($this->returnCallback([
+                $this,
+                'withEntityValuesRegisterCallback'
+            ]));
+
+        $this->setProperty('listenerHandler', $handler);
+        $this->listener = $this->getMockEntityListener();
+
+        $this->object->withEntityValues('123', $this->listener);
     }
 
     /**
-     * Tests that setTimeout sets the timeout as we would expect
+     * The callback used by the mock ListenerHandler to test when
+     * registerListener is called
+     *
+     * @param $arg The argument passed to it by the EntityConsumer
      */
-    public function testSetTimeout()
+    public function withEntityValuesRegisterCallback($arg)
     {
-        $this->object->setTimeout(100);
+        $consumer = $this->object;
+        $this->assertInstanceOf(EntityQueueListener::class, $arg);
+        $this->object = $arg;
+        $this->reflect =
+            new ReflectionClass(EntityQueueListener::class);
 
-        $timeout = $this->reflect->getProperty('timeout');
-        $timeout->setAccessible(true);
-        $this->assertSame(100, $timeout->getValue($this->object));
-    }
-
-    /**
-     * Tests that getEntityValue passes through to getEntityValues and
-     * formats the response
-     */
-    public function testGetEntityValue()
-    {
-        $this->expectHMGet([['foo' => 'bar']]);
+        $this->assertSame($consumer, $this->getProperty('consumer'));
+        $this->assertSame('123', $this->getProperty('id'));
         $this->assertSame(
-            'bar',
-            $this->object->getEntityValue('123', 'foo')
+            $this->listener,
+            $this->getProperty('listener')
         );
     }
 }

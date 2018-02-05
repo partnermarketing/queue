@@ -1,3 +1,3 @@
 #!/bin/sh
 
-docker-compose run php vendor/phpunit/phpunit/phpunit --coverage-text
+docker-compose run php vendor/phpunit/phpunit/phpunit --coverage-html coverage

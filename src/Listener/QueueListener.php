@@ -18,6 +18,17 @@ interface QueueListener
     public function getQueue();
 
     /**
+     * Returns if the Listener is finished
+     *
+     * The ListenerHandler will check this after each time the execute()
+     * hook is called. If it has finished, the listener will be
+     * deregisted automatically
+     *
+     * @return bool
+     */
+    public function isComplete();
+
+    /**
      * Executes when an event comes in
      *
      * @param array $event

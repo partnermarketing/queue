@@ -4,8 +4,11 @@ namespace Partnermarketing\Queue\Test\Service;
 
 use BadMethodCallException;
 use Partnermarketing\Queue\Service\ListenerHandler;
+use Partnermarketing\Queue\Service\RedisService;
+use Partnermarketing\Queue\Entity\Connection;
 use Partnermarketing\Queue\Entity\Queue;
 use Partnermarketing\Queue\Entity\Stream;
+use Partnermarketing\Queue\Exception\NoListenersException;
 use Partnermarketing\Queue\Exception\TimeoutException;
 use Partnermarketing\Queue\Listener\CallbackQueueListener;
 use PHPUnit\Framework\TestCase;
@@ -77,15 +80,60 @@ class ListenerHandlerTest extends TestCase
     }
 
     /**
+     * Tests that the default get and setters work as expected
+     */
+    public function testDefaults()
+    {
+        ListenerHandler::setDefault($this->object);
+
+        $this->assertSame($this->object, ListenerHandler::getDefault());
+    }
+
+    /**
+     * Tests that the constructor does not amend the default if it has
+     * already been set
+     */
+    public function testConstructorDefaultAlreadySet()
+    {
+        RedisService::setTestMode();
+        ListenerHandler::setDefault($this->object);
+
+        new ListenerHandler(new Connection());
+
+        $this->assertSame($this->object, ListenerHandler::getDefault());
+    }
+
+    /**
+     * Tests that the constructor sets the default if it has not already
+     * been set
+     */
+    public function testConstructorDefaultNotSet()
+    {
+        RedisService::setTestMode();
+        $default = $this->reflect->getProperty('default');
+        $default->setAccessible(true);
+        $default->setValue(null);
+
+        $handler = new ListenerHandler(new Connection());
+
+        $this->assertSame($handler, ListenerHandler::getDefault());
+    }
+
+    /**
      * Creates a mock QueueListener with executeCallback() used as the
      * execute callback
      */
     private function getMockQueueListener()
     {
-        return new CallbackQueueListener(
-            $this->queue,
-            [$this, 'executeCallback']
-        );
+        $listener = $this->getMockBuilder(CallbackQueueListener::class)
+            ->setConstructorArgs([
+                $this->queue,
+                [$this, 'executeCallback']
+            ])
+            ->setMethods(['isComplete'])
+            ->getMock();
+
+        return $listener;
     }
 
     /**
@@ -222,6 +270,25 @@ class ListenerHandlerTest extends TestCase
      */
     public function testListenOnce()
     {
+        $this->runListenTest(false);
+    }
+
+    /**
+     * Tests that the listenOnce() method works as expected and also
+     * deregisters the listener if it says it is complete
+     */
+    public function testListenOnceComplete()
+    {
+        $this->runListenTest(true);
+    }
+
+    /**
+     * Runs a listenOnce() test
+     *
+     * @param bool $complete If the listener should report as completed
+     */
+    private function runListenTest($complete)
+    {
         $self = $this;
         $this->conn->expects($this->once())
             ->method('brPop')
@@ -240,9 +307,14 @@ class ListenerHandlerTest extends TestCase
                 }
             ));
 
+        $listener = $this->getMockQueueListener();
+        $listener->expects($this->once())
+            ->method('isComplete')
+            ->willReturn($complete);
+
         $this->getListeners()->setValue(
             $this->object,
-            ['test_stream:queues:test' => $this->getMockQueueListener()]
+            ['test_stream:queues:test' => $listener]
         );
 
         $this->assertSame(
@@ -250,7 +322,27 @@ class ListenerHandlerTest extends TestCase
             $this->object->listenOnce(5)
         );
 
+        if ($complete) {
+            $this->assertEmpty(
+                $this->getListeners()->getValue($this->object)
+            );
+        } else {
+            $this->assertNotEmpty(
+                $this->getListeners()->getValue($this->object)
+            );
+        }
+
         $this->assertEquals(['event' => 'something'], $this->event);
+    }
+
+    /**
+     * Tests that when listenOnce() is called without any registered
+     * listeners, it just throws an exception
+     */
+    public function testListenOnceNoListeners()
+    {
+        $this->expectException(NoListenersException::class);
+        $this->object->listenOnce();
     }
 
     /**
@@ -312,6 +404,15 @@ class ListenerHandlerTest extends TestCase
 
         $this->setUpListenTest(TimeoutException::class)
             ->listen(25, false);
+    }
+
+    /**
+     * Tests that when listen() runs without any listeners it simply
+     * exits the loop
+     */
+    public function testListenNoListeners()
+    {
+        $this->object->listen();
     }
 
     /**
