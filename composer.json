@@ -1,6 +1,7 @@
 {
     "name": "partnermarketing/queue",
-    "type": "project",
+    "type": "library",
+    "license": "Apache-2.0",
     "description": "Partnermarketing's Queuing System",
     "autoload": {
         "psr-4": {
