@@ -2,6 +2,7 @@
 
 namespace Partnermarketing\Queue\Service;
 
+use Partnermarketing\Queue\Listener\CallbackEntityListener;
 use RuntimeException;
 use Partnermarketing\Queue\Entity\Connection;
 use Partnermarketing\Queue\Entity\Stream;
@@ -43,13 +44,21 @@ class EntityConsumer extends EntityManager
     ) {
         parent::__construct($details, $type);
 
-        $this->queue = new Queue(uniqid(), $this->getResponseStream());
+        $this->buildQueue();
 
         if ($listenerHandler) {
             $this->listenerHandler = $listenerHandler;
         } else {
             $this->listenerHandler = ListenerHandler::getDefault();
         }
+    }
+
+    /**
+     * Creates new unique queue.
+     */
+    public function buildQueue()
+    {
+        $this->queue = new Queue(uniqid(), $this->getResponseStream());
     }
 
     /**
@@ -92,6 +101,7 @@ class EntityConsumer extends EntityManager
         if ($data) {
             $listener->withEntity($data);
         } else {
+            $this->buildQueue();
             $this->advertise($id);
             $this->listenerHandler->registerListener(
                 new EntityQueueListener(
@@ -100,6 +110,33 @@ class EntityConsumer extends EntityManager
                     $listener
                 )
             );
+        }
+    }
+
+    /**
+     * Instructs the consumer that it wants to do something with the
+     * given entities ids
+     *
+     * If the entities exists, the given listener is executed straight
+     * away, otherwise it will be added to the listener handler
+     *
+     * @param array $ids
+     * @param EntityListener $listener
+     */
+    public function withEntitiesValues(
+        array $ids,
+        EntityListener $listener
+    ) {
+        $result = [];
+        $batchListener = new CallbackEntityListener(function($data) use ($ids, &$result, $listener) {
+            $result[] = $data;
+
+            if (count($ids) === count($result)) {
+                $listener->withEntity($result);
+            }
+        });
+        foreach ($ids as $id) {
+            $this->withEntityValues($id, $batchListener);
         }
     }
 }

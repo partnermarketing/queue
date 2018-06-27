@@ -2,6 +2,7 @@
 
 namespace Partnermarketing\Queue\Test\Service;
 
+use Partnermarketing\Queue\Listener\CallbackEntityListener;
 use RuntimeException;
 use Partnermarketing\Queue\Entity\Connection;
 use Partnermarketing\Queue\Entity\Stream;
@@ -45,7 +46,11 @@ class EntityConsumerTest extends EntityManagerTestHelper
             ->getMock();
 
         $this->setUpEventPublisher();
+        $this->setObjectProperties();
+    }
 
+    private function setObjectProperties()
+    {
         $this->queue = new Queue('test', new Stream('entity_request'));
         $this->setProperty('queue', $this->queue);
         $this->setProperty('type', 'entity');
@@ -103,6 +108,20 @@ class EntityConsumerTest extends EntityManagerTestHelper
     public function testGetQueue()
     {
         $this->assertSame($this->queue, $this->object->getQueue());
+    }
+
+    /**
+     * Tests that buildQueue() returns new queue and set it to object
+     */
+    public function testBuildQueue()
+    {
+        $queue1 = $this->object->getQueue()->getName();
+        $this->object->buildQueue();
+        $this->assertNotEquals($this->object->getQueue()->getName(), $queue1);
+
+        $queue2 = $this->queue->getName();
+        $this->object->buildQueue();
+        $this->assertNotEquals($this->object->getQueue()->getName(), $queue2);
     }
 
     /**
@@ -227,5 +246,67 @@ class EntityConsumerTest extends EntityManagerTestHelper
             $this->listener,
             $this->getProperty('listener')
         );
+    }
+
+    /**
+     * Tests that if the data does not exist, it asks for it, then sets
+     * up a listener for it
+     */
+    public function testWithEntityValuesNotExistsCallBuildQueue()
+    {
+        $this->object = $this->createPartialMock(EntityConsumer::class, ['buildQueue']);
+        $this->object->expects($this->once())->method('buildQueue');
+        $this->setObjectProperties();
+
+        $this->expectAddEvent();
+        $this->expectHGetAll([[]]);
+
+        $handler = $this->getMockBuilder(ListenerHandler::class)
+            ->disableOriginalConstructor()
+            ->setMethods(['registerListener'])
+            ->getMock();
+
+        $handler->expects($this->once())
+            ->method('registerListener')
+            ->will($this->returnCallback([
+                $this,
+                'withEntityValuesRegisterCallback'
+            ]));
+
+        $this->setProperty('listenerHandler', $handler);
+        $this->listener = $this->getMockEntityListener();
+
+        $this->object->withEntityValues('123', $this->listener);
+    }
+
+    public function testWithEntitiesValues()
+    {
+        $this->object = $this->createPartialMock(EntityConsumer::class, ['withEntityValues']);
+        $this->object->expects($this->at(0))
+            ->method('withEntityValues')
+            ->with($this->equalTo(1), $this->callback(function($callback) {
+                    $callback->withEntity('result1');
+                    return $callback instanceof CallbackEntityListener;
+            }));
+        $this->object->expects($this->at(1))
+            ->method('withEntityValues')
+            ->with($this->equalTo(2), $this->callback(function($callback) {
+                $callback->withEntity('result2');
+                return $callback instanceof CallbackEntityListener;
+            }));
+        $this->object->expects($this->at(2))
+            ->method('withEntityValues')
+            ->with($this->equalTo(3), $this->callback(function($callback) {
+                $callback->withEntity('result3');
+                return $callback instanceof CallbackEntityListener;
+            }));
+        $this->setObjectProperties();
+
+        $this->listener = $this->getMockEntityListener();
+        $this->listener->expects($this->once())
+            ->method('withEntity')
+            ->with(['result1', 'result2', 'result3']);
+
+        $this->object->withEntitiesValues([1, 2, 3], $this->listener);
     }
 }
