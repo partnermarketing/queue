@@ -13,6 +13,8 @@ use Redis;
  */
 class EventPublisher extends RedisService
 {
+
+    const REQUEST_LIVE_TIME = 30;
     /**
      * The stream this publisher sends events too
      *
@@ -58,6 +60,12 @@ class EventPublisher extends RedisService
 
         foreach ($this->getStreamQueues() as $queue) {
             $this->conn->lPush($queue->getList(), $eventData);
+            $this->conn->setTimeout($queue->getList(), self::REQUEST_LIVE_TIME);
         }
+    }
+
+    public function scheduleCleanup()
+    {
+        $this->conn->setTimeout($this->stream->getQueueSet(), self::REQUEST_LIVE_TIME);
     }
 }

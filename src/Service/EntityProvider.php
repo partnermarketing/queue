@@ -40,4 +40,9 @@ class EntityProvider extends EntityManager
             $this->advertise($id);
         }
     }
+
+    public function scheduleCleanup()
+    {
+        $this->eventPublisher->scheduleCleanup();
+    }
 }

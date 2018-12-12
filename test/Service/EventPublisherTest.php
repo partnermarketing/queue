@@ -58,7 +58,7 @@ class EventPublisherTest extends TestCase
     {
         $this->conn = $this->getMockBuilder(Redis::class)
             ->disableOriginalConstructor()
-            ->setMethods(['sMembers', 'lPush'])
+            ->setMethods(['sMembers', 'lPush', 'setTimeout'])
             ->getMock();
 
         $self = $this;
