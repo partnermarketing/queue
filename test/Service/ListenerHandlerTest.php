@@ -359,8 +359,6 @@ class ListenerHandlerTest extends TestCase
             ->method('brPop')
             ->with(['test_stream:queues:test'], 25)
             ->willReturn(null);
-        $this->expectException(TimeoutException::class);
-        $this->expectExceptionMessage('Timed out waiting for events');
 
         $this->object->listenOnce(25);
     }

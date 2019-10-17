@@ -159,7 +159,7 @@ class ListenerHandler extends RedisService
         );
 
         if (!$event) {
-            throw new TimeoutException('Timed out waiting for events');
+            return;
         }
 
         $listener = $this->listeners[$event[0]];
