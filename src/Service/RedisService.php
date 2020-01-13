@@ -3,6 +3,7 @@
 namespace Partnermarketing\Queue\Service;
 
 use Partnermarketing\Queue\Entity\Connection;
+use Predis\Client;
 use Redis;
 
 /**
@@ -44,7 +45,7 @@ abstract class RedisService
     /**
      * The persistent connection for this service
      *
-     * @var Redis
+     * @var Client
      */
     protected $conn;
 
@@ -65,11 +66,7 @@ abstract class RedisService
         $this->details = $details;
 
         if (!RedisService::inTestMode()) {
-            $this->conn = new Redis();
-            $this->conn->pconnect(
-                $this->details->getHost(),
-                $this->details->getPort()
-            );
+            $this->conn = new Client('tcp://' . $this->details->getHost() . ':' . $this->details->getPort());
         }
     }
 }

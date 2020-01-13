@@ -56,6 +56,7 @@ class Queue
     /**
      * Gets the Stream that this is a member of
      *
+     * @return Stream
      * @var Queue
      */
     public function getStream()

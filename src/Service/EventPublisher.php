@@ -59,13 +59,13 @@ class EventPublisher extends RedisService
         $eventData = json_encode($event);
 
         foreach ($this->getStreamQueues() as $queue) {
-            $this->conn->lPush($queue->getList(), $eventData);
-            $this->conn->setTimeout($queue->getList(), self::REQUEST_LIVE_TIME);
+            $this->conn->lPush($queue->getList(), [$eventData]);
+            $this->conn->expire($queue->getList(), self::REQUEST_LIVE_TIME);
         }
     }
 
     public function scheduleCleanup()
     {
-        $this->conn->setTimeout($this->stream->getQueueSet(), self::REQUEST_LIVE_TIME);
+        $this->conn->expire($this->stream->getQueueSet(), self::REQUEST_LIVE_TIME);
     }
 }

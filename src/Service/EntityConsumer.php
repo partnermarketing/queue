@@ -58,7 +58,7 @@ class EntityConsumer extends EntityManager
      */
     public function buildQueue()
     {
-        $this->queue = new Queue(uniqid(), $this->getResponseStream());
+        $this->queue = new Queue(uniqid('', true), $this->getResponseStream());
     }
 
     /**
@@ -128,7 +128,7 @@ class EntityConsumer extends EntityManager
         EntityListener $listener
     ) {
         $result = [];
-        $batchListener = new CallbackEntityListener(function($data) use ($ids, &$result, $listener) {
+        $batchListener = new CallbackEntityListener(static function($data) use ($ids, &$result, $listener) {
             $result[] = $data;
 
             if (count($ids) === count($result)) {

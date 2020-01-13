@@ -36,6 +36,9 @@ class EntityQueueListener extends AbstractQueueListener
     /**
      * Constructs the handler with the queue info and a callback to
      * run when the execute method is called
+     * @param EntityConsumer $consumer
+     * @param $id
+     * @param EntityListener $listener
      */
     public function __construct(
         EntityConsumer $consumer,

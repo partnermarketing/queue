@@ -9,6 +9,5 @@ use RuntimeException;
  */
 class TimeoutException extends RuntimeException
 {
-    //
 }
 
