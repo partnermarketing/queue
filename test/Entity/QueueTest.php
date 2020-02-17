@@ -12,7 +12,7 @@ class QueueTest extends TestCase
 
     private $stream;
 
-    public function setUp()
+    protected function setUp(): void
     {
         $this->stream = new Stream('test_stream');
         $this->queue = new Queue('test', $this->stream);

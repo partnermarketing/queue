@@ -18,6 +18,8 @@ class CallbackEntityListener implements EntityListener
     /**
      * Constructs the handler with callback to
      * run when the withEntity method is called
+     *
+     * @param $callback
      */
     public function __construct($callback)
     {

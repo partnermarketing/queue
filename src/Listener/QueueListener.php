@@ -22,7 +22,7 @@ interface QueueListener
      *
      * The ListenerHandler will check this after each time the execute()
      * hook is called. If it has finished, the listener will be
-     * deregisted automatically
+     * removed automatically
      *
      * @return bool
      */

@@ -1,21 +1,16 @@
-apk add --no-cache \
-    openssl \
+pecl install redis-5.1.1 \
+    && pecl install xdebug-2.8.1 \
+    && docker-php-ext-enable redis xdebug
+
+apt-get update && \
+
+apt-get install openssl \
+    zip \
     ca-certificates \
-    php7 \
-    php7-xdebug \
-    php7-json \
-    php7-mbstring \
-    php7-phar \
-    php7-openssl \
-    php7-tokenizer \
-    php7-dom \
-    php7-xml \
-    php7-xmlwriter \
+    gcc \
+    musl-dev \
+    make \
     curl
 
 curl -sS https://getcomposer.org/installer | \
     php -- --install-dir=/usr/local/bin --filename=composer
-
-apk del curl
-
-sed -i 's/;//' /etc/php7/conf.d/xdebug.ini

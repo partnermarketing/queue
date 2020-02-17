@@ -12,7 +12,6 @@ use Partnermarketing\Queue\Listener\EntityQueueListener;
 use Partnermarketing\Queue\Exception\TimeoutException;
 use Partnermarketing\Queue\Service\ListenerHandler;
 use Partnermarketing\Queue\Service\EntityConsumer;
-use Partnermarketing\Queue\Service\EventPublisher;
 use ReflectionClass;
 
 class EntityConsumerTest extends EntityManagerTestHelper

@@ -1,4 +1,4 @@
-image: alpine
+image: php:7.4-cli
 
 test:
     stage: test

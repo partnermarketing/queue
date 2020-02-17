@@ -1,4 +1,4 @@
-FROM alpine
+FROM php:7.4-cli
 
 COPY bin/install.sh /
 

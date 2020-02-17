@@ -53,11 +53,12 @@ class Queue
         return $this->name;
     }
 
-    /**
-     * Gets the Stream that this is a member of
-     *
-     * @var Queue
-     */
+  /**
+   * Gets the Stream that this is a member of
+   *
+   * @var Queue
+   * @return Stream
+   */
     public function getStream()
     {
         return $this->stream;

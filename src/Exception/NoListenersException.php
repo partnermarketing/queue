@@ -10,6 +10,5 @@ use RuntimeException;
  */
 class NoListenersException extends RuntimeException
 {
-    //
 }
 

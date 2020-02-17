@@ -20,6 +20,9 @@ class CallbackQueueListener extends AbstractQueueListener
     /**
      * Constructs the handler with the queue info and a callback to
      * run when the execute method is called
+     *
+     * @param Queue $queue
+     * @param $callback
      */
     public function __construct(Queue $queue, $callback)
     {

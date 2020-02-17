@@ -64,7 +64,7 @@ abstract class RedisService
     {
         $this->details = $details;
 
-        if (!RedisService::inTestMode()) {
+        if (!self::inTestMode()) {
             $this->conn = new Redis();
             $this->conn->pconnect(
                 $this->details->getHost(),

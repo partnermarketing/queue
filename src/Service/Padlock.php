@@ -35,7 +35,7 @@ class Padlock extends RedisService
         parent::__construct($details);
 
         $this->name = $name;
-        $this->id = uniqid();
+        $this->id = uniqid('', true);
     }
 
     /**

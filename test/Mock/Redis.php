@@ -1,5 +1,7 @@
 <?php
 
+namespace Partnermarketing\Queue\Test\Mock;
+
 /**
  * A Redis stub to test that it is instantiated properly
  */

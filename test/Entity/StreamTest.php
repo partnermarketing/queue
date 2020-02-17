@@ -9,7 +9,7 @@ class StreamTest extends TestCase
 {
     private $stream;
 
-    public function setUp()
+    protected function setUp(): void
     {
         $this->stream = new Stream('test_stream');
     }
