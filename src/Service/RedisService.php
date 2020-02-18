@@ -4,7 +4,6 @@ namespace Partnermarketing\Queue\Service;
 
 use Partnermarketing\Queue\Entity\Connection;
 use Predis\Client;
-use Redis;
 
 /**
  * Services that extend this have a connection to a redis service
@@ -65,7 +64,7 @@ abstract class RedisService
     {
         $this->details = $details;
 
-        if (!RedisService::inTestMode()) {
+        if (!self::inTestMode()) {
             $this->conn = new Client('tcp://' . $this->details->getHost() . ':' . $this->details->getPort());
         }
     }

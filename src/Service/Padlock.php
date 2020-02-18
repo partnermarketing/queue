@@ -93,7 +93,7 @@ class Padlock extends RedisService
             );
         }
 
-        $this->conn->del(['lock:' . $this->name]);
+        $this->conn->del('lock:' . $this->name);
     }
 
     /**

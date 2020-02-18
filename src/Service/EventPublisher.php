@@ -5,8 +5,6 @@ namespace Partnermarketing\Queue\Service;
 use Partnermarketing\Queue\Entity\Connection;
 use Partnermarketing\Queue\Entity\Stream;
 use Partnermarketing\Queue\Entity\Queue;
-use Partnermarketing\Queue\Listener\QueueListener;
-use Redis;
 
 /**
  * A service which is able to publish events to a stream
@@ -39,7 +37,7 @@ class EventPublisher extends RedisService
      * Queries the redis queue set for this stream and returns a queue
      * for each of them
      *
-     * @return array<Queue>
+     * @return \Generator <Queue>
      */
     public function getStreamQueues()
     {
@@ -59,7 +57,7 @@ class EventPublisher extends RedisService
         $eventData = json_encode($event);
 
         foreach ($this->getStreamQueues() as $queue) {
-            $this->conn->lPush($queue->getList(), [$eventData]);
+            $this->conn->lPush($queue->getList(), $eventData);
             $this->conn->expire($queue->getList(), self::REQUEST_LIVE_TIME);
         }
     }

@@ -23,14 +23,14 @@ class EntityProviderTest extends EntityManagerTestHelper
     /**
      * Sets up the commonly used items for each test
      */
-    public function setUp()
+    public function setUp(): void
     {
         $this->reflect = new ReflectionClass(EntityProvider::class);
         $this->object = $this->reflect->newInstanceWithoutConstructor();
 
         $this->conn = $this->getMockBuilder(Redis::class)
             ->disableOriginalConstructor()
-            ->setMethods(['hMSet', 'publish', 'setTimeout'])
+            ->setMethods(['hMSet', 'publish', 'expire'])
             ->getMock();
 
         $this->setUpEventPublisher();
@@ -54,7 +54,7 @@ class EntityProviderTest extends EntityManagerTestHelper
             ->with('entity:123', ['uuid' => '123', 'data' => 1]);
 
         $this->conn->expects($this->once())
-            ->method('setTimeout')
+            ->method('expire')
             ->with('entity:123', 600);
     }
 

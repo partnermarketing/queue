@@ -61,7 +61,7 @@ class ListenerHandlerTest extends TestCase
     /**
      * Sets up the commonly used items for each test
      */
-    public function setUp()
+    public function setUp(): void
     {
         $this->event = null;
         $this->reflect = new ReflectionClass(ListenerHandler::class);

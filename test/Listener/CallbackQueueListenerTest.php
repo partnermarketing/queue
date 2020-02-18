@@ -32,7 +32,7 @@ class CallbackQueueListenerTest extends TestCase
     /**
      * Sets up the test
      */
-    public function setUp()
+    public function setUp(): void
     {
         $this->queue = new Queue('test', new Stream('test_stream'));
         $this->listener = new CallbackQueueListener(

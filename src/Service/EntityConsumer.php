@@ -3,11 +3,8 @@
 namespace Partnermarketing\Queue\Service;
 
 use Partnermarketing\Queue\Listener\CallbackEntityListener;
-use RuntimeException;
 use Partnermarketing\Queue\Entity\Connection;
-use Partnermarketing\Queue\Entity\Stream;
 use Partnermarketing\Queue\Entity\Queue;
-use Partnermarketing\Queue\Exception\TimeoutException;
 use Partnermarketing\Queue\Listener\EntityListener;
 use Partnermarketing\Queue\Listener\EntityQueueListener;
 

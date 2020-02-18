@@ -36,7 +36,7 @@ class PadlockTest extends TestCase
      */
     private $reflect;
 
-    public function setUp()
+    public function setUp(): void
     {
         RedisService::setTestMode();
 

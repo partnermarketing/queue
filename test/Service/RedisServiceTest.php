@@ -6,6 +6,7 @@ use Partnermarketing\Queue\Entity\Connection;
 use Partnermarketing\Queue\Service\RedisService;
 use Partnermarketing\Queue\Test\Mock\RedisServiceStub;
 use PHPUnit\Framework\TestCase;
+use Predis\Client;
 use Redis;
 
 require_once __DIR__ . '/../Mock/Redis.php';
@@ -40,9 +41,9 @@ class RedisServiceTest extends TestCase
      * disabled
      *
      * @param boolean $testMode
-     * @return ?Redis The redis connection
+     * @return ?Client The redis connection
      */
-    private function startConstructorTest(bool $testMode) : ?Redis
+    private function startConstructorTest(bool $testMode) : ?Client
     {
         RedisService::setTestMode($testMode);
 
@@ -61,9 +62,9 @@ class RedisServiceTest extends TestCase
     public function testConstructor() : void
     {
         $connection = $this->startConstructorTest(false);
-        $this->assertInstanceOf(Redis::class, $connection);
-        $this->assertSame('host', $connection->host);
-        $this->assertSame(123, $connection->port);
+        $this->assertInstanceOf(Client::class, $connection);
+        $this->assertSame('host', $connection->getConnection()->getParameters()->host);
+        $this->assertSame(123, $connection->getConnection()->getParameters()->port);
     }
 
     /**

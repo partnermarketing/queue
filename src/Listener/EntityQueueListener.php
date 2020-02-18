@@ -2,7 +2,6 @@
 
 namespace Partnermarketing\Queue\Listener;
 
-use Partnermarketing\Queue\Entity\Queue;
 use Partnermarketing\Queue\Service\EntityConsumer;
 
 /**

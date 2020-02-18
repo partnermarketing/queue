@@ -58,7 +58,7 @@ class EventPublisherTest extends TestCase
     {
         $this->conn = $this->getMockBuilder(Redis::class)
             ->disableOriginalConstructor()
-            ->setMethods(['sMembers', 'lPush', 'setTimeout'])
+            ->setMethods(['sMembers', 'lPush', 'expire'])
             ->getMock();
 
         $self = $this;
@@ -77,7 +77,7 @@ class EventPublisherTest extends TestCase
     /**
      * Sets up the commonly used items for each test
      */
-    public function setUp()
+    public function setUp(): void
     {
         $this->event = null;
         $this->reflect = new ReflectionClass(EventPublisher::class);

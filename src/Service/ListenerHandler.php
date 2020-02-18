@@ -28,7 +28,7 @@ class ListenerHandler extends RedisService
     /**
      * Set the default ListenerHandler for the application
      *
-     * EntityConsumers will use this by default if no listenerhandler is
+     * EntityConsumers will use this by default if no listener handler is
      * provided
      *
      * @param ListenerHandler $listenerHandler
@@ -78,7 +78,7 @@ class ListenerHandler extends RedisService
         $queue = $listener->getQueue();
         $this->conn->sAdd(
             $queue->getStream()->getQueueSet(),
-            [$queue->getName()]
+            $queue->getName()
         );
         $this->listeners[$queue->getList()] = $listener;
     }
