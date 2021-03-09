@@ -1,5 +1,4 @@
 vendor
-composer.lock
 coverage
 queue.iml
 queue.ipr
