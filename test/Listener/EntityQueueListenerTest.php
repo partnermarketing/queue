@@ -54,7 +54,7 @@ class EntityQueueListenerTest extends TestCase
     /**
      * Sets up the tests
      */
-    public function setUp()
+    public function setUp(): void
     {
         $this->reflect =
             new ReflectionClass(EntityQueueListener::class);

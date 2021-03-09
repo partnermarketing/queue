@@ -28,7 +28,7 @@ class ListenerHandler extends RedisService
     /**
      * Set the default ListenerHandler for the application
      *
-     * EntityConsumers will use this by default if no listenerhandler is
+     * EntityConsumers will use this by default if no listener handler is
      * provided
      *
      * @param ListenerHandler $listenerHandler
@@ -92,7 +92,7 @@ class ListenerHandler extends RedisService
      */
     public function deregisterQueue(Queue $queue, $force = false)
     {
-        if (!isset($this->listeners[$queue->getList()]) && !$force) {
+        if (!$force && !isset($this->listeners[$queue->getList()])) {
             throw new BadMethodCallException(
                 'Queue ' . $queue->getName() . ' is not registered'
             );
@@ -109,8 +109,7 @@ class ListenerHandler extends RedisService
     /**
      * Deletes a listener
      *
-     * @param QueueListener
-     * @throws BadMethodCallException If the queue isn't registered
+     * @param QueueListener $listener
      */
     public function deregisterListener(QueueListener $listener)
     {
@@ -150,7 +149,7 @@ class ListenerHandler extends RedisService
     public function listenOnce($timeout = 0)
     {
         if (!count($this->listeners)) {
-            throw new NoListenersException();
+            throw new NoListenersException('No listeners available.');
         }
 
         $event = $this->conn->brPop(
@@ -159,7 +158,7 @@ class ListenerHandler extends RedisService
         );
 
         if (!$event) {
-            return;
+            return null;
         }
 
         $listener = $this->listeners[$event[0]];

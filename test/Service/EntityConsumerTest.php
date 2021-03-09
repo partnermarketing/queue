@@ -35,7 +35,7 @@ class EntityConsumerTest extends EntityManagerTestHelper
     /**
      * Sets up the service being tested
      */
-    public function setUp() : void
+    public function setUp(): void
     {
         $this->reflect = new ReflectionClass(EntityConsumer::class);
         $this->object = $this->reflect->newInstanceWithoutConstructor();
@@ -75,7 +75,7 @@ class EntityConsumerTest extends EntityManagerTestHelper
         $this->assertSame(
             1,
             preg_match(
-                '/^[0-9a-z]{13}$/',
+                '/^[0-9a-z]{14}\.[0-9a-z]{8}$/',
                 $this->object->getQueue()->getName()
             )
         );

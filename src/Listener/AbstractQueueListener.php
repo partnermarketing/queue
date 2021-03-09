@@ -60,5 +60,5 @@ abstract class AbstractQueueListener implements QueueListener
     /**
      * {@inheritDoc}
      */
-    abstract function execute($event);
+    abstract public function execute($event);
 }

@@ -30,7 +30,6 @@ abstract class EntityManager extends RedisService
      *
      * @param Connection $details
      * @param string $type
-     * @param string $id
      */
     public function __construct(Connection $details, $type)
     {

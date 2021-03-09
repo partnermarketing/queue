@@ -22,6 +22,7 @@ class EntityProvider extends EntityManager
      *
      * @param array $data
      * @param boolean $advertise
+     * @param int $expire
      */
     public function save($data, $advertise = true, $expire = 600)
     {
@@ -34,7 +35,7 @@ class EntityProvider extends EntityManager
         $id = $data['uuid'];
 
         $this->conn->hMSet($this->getHash($id), $data);
-        $this->conn->setTimeout($this->getHash($id), $expire);
+        $this->conn->expire($this->getHash($id), $expire);
 
         if ($advertise) {
             $this->advertise($id);

@@ -35,7 +35,7 @@ class EntityManagerTest extends EntityManagerTestHelper
      * Runs basic setup tasks by setting the test mode and setups up the
      * reflector
      */
-    public function setUp() : void
+    public function setUp(): void
     {
         EntityManager::setTestMode();
         $this->reflect = new ReflectionClass(EntityManager::class);

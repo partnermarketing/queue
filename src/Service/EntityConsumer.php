@@ -3,11 +3,8 @@
 namespace Partnermarketing\Queue\Service;
 
 use Partnermarketing\Queue\Listener\CallbackEntityListener;
-use RuntimeException;
 use Partnermarketing\Queue\Entity\Connection;
-use Partnermarketing\Queue\Entity\Stream;
 use Partnermarketing\Queue\Entity\Queue;
-use Partnermarketing\Queue\Exception\TimeoutException;
 use Partnermarketing\Queue\Listener\EntityListener;
 use Partnermarketing\Queue\Listener\EntityQueueListener;
 
@@ -58,7 +55,7 @@ class EntityConsumer extends EntityManager
      */
     public function buildQueue()
     {
-        $this->queue = new Queue(uniqid(), $this->getResponseStream());
+        $this->queue = new Queue(uniqid('', true), $this->getResponseStream());
     }
 
     /**
@@ -128,7 +125,7 @@ class EntityConsumer extends EntityManager
         EntityListener $listener
     ) {
         $result = [];
-        $batchListener = new CallbackEntityListener(function($data) use ($ids, &$result, $listener) {
+        $batchListener = new CallbackEntityListener(static function($data) use ($ids, &$result, $listener) {
             $result[] = $data;
 
             if (count($ids) === count($result)) {
