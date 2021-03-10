@@ -411,6 +411,8 @@ class ListenerHandlerTest extends TestCase
     public function testListenNoListeners()
     {
         $this->object->listen();
+
+        $this->assertTrue(true);
     }
 
     /**

@@ -25,7 +25,7 @@ class CallbackEntityListenerTest extends TestCase
      */
     public function setUp(): void
     {
-        $this->mockCallback = $this->createPartialMock('stdClass', ['callback']);
+        $this->mockCallback = $this->getMockBuilder(\stdClass::class)->addMethods(['callback'])->getMock();
 
         $this->listener = new CallbackEntityListener(
             [$this->mockCallback, 'callback']

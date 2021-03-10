@@ -2,17 +2,14 @@
 
 namespace Partnermarketing\Queue\Test\Service;
 
-use Partnermarketing\Queue\Listener\CallbackEntityListener;
-use RuntimeException;
 use Partnermarketing\Queue\Entity\Connection;
-use Partnermarketing\Queue\Entity\Stream;
 use Partnermarketing\Queue\Entity\Queue;
+use Partnermarketing\Queue\Entity\Stream;
+use Partnermarketing\Queue\Listener\CallbackEntityListener;
 use Partnermarketing\Queue\Listener\EntityListener;
 use Partnermarketing\Queue\Listener\EntityQueueListener;
-use Partnermarketing\Queue\Exception\TimeoutException;
-use Partnermarketing\Queue\Service\ListenerHandler;
 use Partnermarketing\Queue\Service\EntityConsumer;
-use Partnermarketing\Queue\Service\EventPublisher;
+use Partnermarketing\Queue\Service\ListenerHandler;
 use ReflectionClass;
 
 class EntityConsumerTest extends EntityManagerTestHelper
@@ -180,7 +177,7 @@ class EntityConsumerTest extends EntityManagerTestHelper
     {
         return $this->getMockBuilder(EntityListener::class)
             ->disableOriginalConstructor()
-            ->setMethods(['withEntity'])
+            ->onlyMethods(['withEntity'])
             ->getMock();
     }
 
@@ -263,7 +260,7 @@ class EntityConsumerTest extends EntityManagerTestHelper
 
         $handler = $this->getMockBuilder(ListenerHandler::class)
             ->disableOriginalConstructor()
-            ->setMethods(['registerListener'])
+            ->onlyMethods(['registerListener'])
             ->getMock();
 
         $handler->expects($this->once())
@@ -281,25 +278,14 @@ class EntityConsumerTest extends EntityManagerTestHelper
 
     public function testWithEntitiesValues()
     {
+        $input = [1, 2, 3];
         $this->object = $this->createPartialMock(EntityConsumer::class, ['withEntityValues']);
-        $this->object->expects($this->at(0))
+        $this->object->expects($this->exactly(count($input)))
             ->method('withEntityValues')
-            ->with($this->equalTo(1), $this->callback(function($callback) {
-                    $callback->withEntity('result1');
-                    return $callback instanceof CallbackEntityListener;
-            }));
-        $this->object->expects($this->at(1))
-            ->method('withEntityValues')
-            ->with($this->equalTo(2), $this->callback(function($callback) {
-                $callback->withEntity('result2');
-                return $callback instanceof CallbackEntityListener;
-            }));
-        $this->object->expects($this->at(2))
-            ->method('withEntityValues')
-            ->with($this->equalTo(3), $this->callback(function($callback) {
-                $callback->withEntity('result3');
-                return $callback instanceof CallbackEntityListener;
-            }));
+            ->willReturnCallback(function ($id, $listener) {
+                $listener->withEntity('result' . $id);
+                return $listener instanceof CallbackEntityListener;
+            });
         $this->setObjectProperties();
 
         $this->listener = $this->getMockEntityListener();
@@ -307,6 +293,6 @@ class EntityConsumerTest extends EntityManagerTestHelper
             ->method('withEntity')
             ->with(['result1', 'result2', 'result3']);
 
-        $this->object->withEntitiesValues([1, 2, 3], $this->listener);
+        $this->object->withEntitiesValues($input, $this->listener);
     }
 }
