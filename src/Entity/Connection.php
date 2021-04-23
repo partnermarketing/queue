@@ -27,9 +27,9 @@ class Connection
      * @param string $host
      * @param int $port
      */
-    public function __construct($host = 'redis', $port = 6379)
+    public function __construct($host = null, $port = 6379)
     {
-        $this->host = $host;
+        $this->host = $host ?: getenv('REDIS_HOST') ?: 'redis';
         $this->port = $port;
     }
 
