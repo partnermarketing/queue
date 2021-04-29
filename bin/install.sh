@@ -10,8 +10,7 @@ apk add --no-cache \
     php7-tokenizer \
     php7-dom \
     php7-xml \
-    php7-xmlwriter \
-    curl
+    php7-xmlwriter
 
 curl -sS https://getcomposer.org/installer | \
     php -- --install-dir=/usr/local/bin --filename=composer
